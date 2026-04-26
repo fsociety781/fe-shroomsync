@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Primary Colors */
+  --earth-brown: #7B5E3C;
+  --warm-beige: #E7DCC6;
+  --soft-beige: #F5EFE6;
+  --sage-green: #6B8F71;
+  --dark-brown: #4E3A28;
+  --text-primary: #2E2E2E;
+  
+  /* Additional / Semantic Colors */
+  --text-secondary: #7B5E3C;
+  --text-muted: #888888;
+  --bg-primary: #F9F7F4; /* Lighter background for the main canvas */
+  --bg-secondary: #FFFFFF; /* White for cards to pop against soft background */
+  --border-color: rgba(123, 94, 60, 0.15); 
+  
+  /* Status Colors */
+  --success: var(--sage-green);
+  --error: #E55353;
+  --warning: #F5A623;
+
+  /* Shadows for premium glassmorphism/soft UI feel */
+  --shadow-sm: 0 1px 3px rgba(123, 94, 60, 0.05);
+  --shadow-md: 0 4px 12px rgba(123, 94, 60, 0.06);
+  --shadow-lg: 0 12px 24px rgba(123, 94, 60, 0.08);
+  
+  /* Borders */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(123, 94, 60, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--earth-brown);
+}
