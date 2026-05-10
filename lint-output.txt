@@ -1,0 +1,179 @@
+
+> temp-app@0.0.0 lint
+> eslint .
+
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\app.js
+   5:17  error  'require' is not defined  no-undef
+   6:14  error  'require' is not defined  no-undef
+   7:16  error  'require' is not defined  no-undef
+   8:16  error  'require' is not defined  no-undef
+  11:22  error  'require' is not defined  no-undef
+  12:23  error  'require' is not defined  no-undef
+  13:25  error  'require' is not defined  no-undef
+  14:19  error  'require' is not defined  no-undef
+  17:22  error  'require' is not defined  no-undef
+  38:24  error  'process' is not defined  no-undef
+  60:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\routes\index.js
+  1:15  error  'require' is not defined          no-undef
+  5:36  error  'next' is defined but never used  no-unused-vars
+  9:1   error  'module' is not defined           no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\routes\users.js
+  1:15  error  'require' is not defined          no-undef
+  5:36  error  'next' is defined but never used  no-unused-vars
+  9:1   error  'module' is not defined           no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\config\index.js
+   5:1   error  'require' is not defined  no-undef
+   9:18  error  'process' is not defined  no-undef
+  10:12  error  'process' is not defined  no-undef
+  11:11  error  'process' is not defined  no-undef
+  15:16  error  'process' is not defined  no-undef
+  16:15  error  'process' is not defined  no-undef
+  17:15  error  'process' is not defined  no-undef
+  18:15  error  'process' is not defined  no-undef
+  22:16  error  'process' is not defined  no-undef
+  25:22  error  'process' is not defined  no-undef
+  28:36  error  'process' is not defined  no-undef
+  31:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\constants\mqtt-topics.js
+  58:1  error  'module' is not defined  no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\controllers\control.controller.js
+    7:21  error  'require' is not defined  no-undef
+    8:25  error  'require' is not defined  no-undef
+   18:5   error  'require' is not defined  no-undef
+   19:22  error  'require' is not defined  no-undef
+   20:21  error  'require' is not defined  no-undef
+  125:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\controllers\device.controller.js
+   7:23  error  'require' is not defined  no-undef
+   8:32  error  'require' is not defined  no-undef
+   9:22  error  'require' is not defined  no-undef
+  10:21  error  'require' is not defined  no-undef
+  51:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\controllers\ota.controller.js
+   7:21  error  'require' is not defined  no-undef
+   8:20  error  'require' is not defined  no-undef
+   9:46  error  'require' is not defined  no-undef
+  10:30  error  'require' is not defined  no-undef
+  11:22  error  'require' is not defined  no-undef
+  12:21  error  'require' is not defined  no-undef
+  67:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\controllers\telemetry.controller.js
+   7:26  error  'require' is not defined  no-undef
+   8:34  error  'require' is not defined  no-undef
+   9:27  error  'require' is not defined  no-undef
+  10:22  error  'require' is not defined  no-undef
+  11:21  error  'require' is not defined  no-undef
+  73:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\middleware\error-handler.js
+   5:39  error  'require' is not defined           no-undef
+   6:21  error  'require' is not defined           no-undef
+   7:16  error  'require' is not defined           no-undef
+   9:38  error  '_next' is defined but never used  no-unused-vars
+  43:19  error  'process' is not defined           no-undef
+  50:1   error  'module' is not defined            no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\middleware\validate.middleware.js
+   1:15  error  'require' is not defined  no-undef
+   2:29  error  'require' is not defined  no-undef
+  39:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\routes\control.routes.js
+   6:20  error  'require' is not defined  no-undef
+   7:27  error  'require' is not defined  no-undef
+  21:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\routes\device.routes.js
+   6:20  error  'require' is not defined  no-undef
+   7:26  error  'require' is not defined  no-undef
+  16:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\routes\ota.routes.js
+   6:20  error  'require' is not defined  no-undef
+   7:23  error  'require' is not defined  no-undef
+  15:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\routes\telemetry.routes.js
+   6:20  error  'require' is not defined  no-undef
+   7:29  error  'require' is not defined  no-undef
+  17:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\services\device.service.js
+    5:16  error  'require' is not defined    no-undef
+    6:42  error  'require' is not defined    no-undef
+    7:12  error  'require' is not defined    no-undef
+    8:14  error  'require' is not defined    no-undef
+  156:36  error  '__dirname' is not defined  no-undef
+  175:1   error  'module' is not defined     no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\services\mqtt.service.js
+    7:14  error  'require' is not defined  no-undef
+    8:16  error  'require' is not defined  no-undef
+    9:50  error  'require' is not defined  no-undef
+   10:23  error  'require' is not defined  no-undef
+   11:26  error  'require' is not defined  no-undef
+   12:20  error  'require' is not defined  no-undef
+   13:23  error  'require' is not defined  no-undef
+   14:16  error  'require' is not defined  no-undef
+  370:24  error  'require' is not defined  no-undef
+  384:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\services\ota.service.js
+   5:16  error  'require' is not defined  no-undef
+  79:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\services\socket.service.js
+   13:24  error  'require' is not defined  no-undef
+  108:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\services\telemetry.service.js
+    5:16  error  'require' is not defined  no-undef
+    6:16  error  'require' is not defined  no-undef
+  158:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\utils\api-response.js
+  56:1  error  'module' is not defined  no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\utils\async-handler.js
+  12:1  error  'module' is not defined  no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\utils\errors.js
+  34:1  error  'module' is not defined  no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\utils\logger.js
+   1:14  error  'require' is not defined  no-undef
+   2:16  error  'require' is not defined  no-undef
+  15:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\utils\prisma.js
+   5:26  error  'require' is not defined  no-undef
+   9:5   error  'process' is not defined  no-undef
+  13:8   error  'global' is not defined   no-undef
+  14:5   error  'global' is not defined   no-undef
+  18:12  error  'global' is not defined   no-undef
+  21:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\src\utils\validators.js
+   5:15  error  'require' is not defined  no-undef
+  86:1   error  'module' is not defined   no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\.temp-api\test\smoke-test.js
+  2:14  error  'require' is not defined  no-undef
+
+D:\File Pribadi\Projek\SCM-PROJEK UPDATE\fe-shroomsync\src\App.jsx
+    1:8   error  'React' is defined but never used                    no-unused-vars
+    2:18  error  'AnimatePresence' is defined but never used          no-unused-vars
+  104:7   error  'latestKumbungs' is assigned a value but never used  no-unused-vars
+
+Ô£û 116 problems (116 errors, 0 warnings)
+
