@@ -3689,7 +3689,7 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, update
               </section>
 
               <div className={`control-layout ${currentControlMode === 1 ? 'manual-only' : ''} ${currentControlMode === 2 ? 'auto-only' : ''} ${currentControlMode === 3 ? 'hybrid' : ''}`}>
-                {actuatorControlsAvailable ? (
+                {actuatorControlsAvailable && (
                   <section className="control-card">
                     <div className="control-card-header">
                       <div>
@@ -3706,7 +3706,7 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, update
                             <p className="text-muted">{pendingActuators.fan ? 'Mengirim perintah...' : fanOn ? 'Aktif' : 'Nonaktif'} untuk membasahi lantai kumbung.</p>
                           </div>
                         </div>
-                        <button type="button" className={`toggle-switch large ${fanOn ? 'active' : ''} ${pendingActuators.fan ? 'pending' : ''}`} aria-pressed={fanOn} aria-busy={pendingActuators.fan} disabled={pendingActuators.fan || !actuatorControlsAvailable} onClick={() => handleActuator('fan', fanOn)}></button>
+                        <button type="button" className={`toggle-switch large ${fanOn ? 'active' : ''} ${pendingActuators.fan ? 'pending' : ''}`} aria-pressed={fanOn} aria-busy={pendingActuators.fan} disabled={pendingActuators.fan} onClick={() => handleActuator('fan', fanOn)}></button>
                       </div>
 
                       <div className="actuator-card">
@@ -3717,42 +3717,7 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, update
                             <p className="text-muted">{pendingActuators.pump ? 'Mengirim perintah...' : pumpOn ? 'Aktif' : 'Nonaktif'} untuk menaikkan kelembaban ruang.</p>
                           </div>
                         </div>
-                        <button type="button" className={`toggle-switch large ${pumpOn ? 'active' : ''} ${pendingActuators.pump ? 'pending' : ''}`} aria-pressed={pumpOn} aria-busy={pendingActuators.pump} disabled={pendingActuators.pump || !actuatorControlsAvailable} onClick={() => handleActuator('pump', pumpOn)}></button>
-                      </div>
-                    </div>
-                  </section>
-                ) : (
-                  <section className="control-card">
-                    <div className="control-card-header">
-                      <div>
-                        <h3>Kontrol Manual Aktuator</h3>
-                        <p>Status terakhir: {actuatorUpdatedLabel}</p>
-                      </div>
-                    </div>
-                    <div className="info-alert control-note">
-                      <Info size={16} className="info-icon" />
-                      <p>Kontrol manual aktuator hanya tersedia di mode Manual atau Hybrid.</p>
-                    </div>
-                    <div className="actuator-list">
-                      <div className="actuator-card">
-                        <div className="actuator-info">
-                          <div className={`actuator-icon ${fanOn ? 'active floor' : ''}`}><Waves size={24} /></div>
-                          <div>
-                            <h4>Pompa Lantai (Floor Pump)</h4>
-                            <p className="text-muted">{fanOn ? 'Aktif' : 'Nonaktif'} untuk membasahi lantai kumbung.</p>
-                          </div>
-                        </div>
-                        <button type="button" className={`toggle-switch large ${fanOn ? 'active' : ''}`} aria-pressed={fanOn} disabled></button>
-                      </div>
-                      <div className="actuator-card">
-                        <div className="actuator-info">
-                          <div className={`actuator-icon ${pumpOn ? 'active pump' : ''}`}><Droplet size={24} /></div>
-                          <div>
-                            <h4>Pompa Kabut (Mist Pump)</h4>
-                            <p className="text-muted">{pumpOn ? 'Aktif' : 'Nonaktif'} untuk menaikkan kelembaban ruang.</p>
-                          </div>
-                        </div>
-                        <button type="button" className={`toggle-switch large ${pumpOn ? 'active' : ''}`} aria-pressed={pumpOn} disabled></button>
+                        <button type="button" className={`toggle-switch large ${pumpOn ? 'active' : ''} ${pendingActuators.pump ? 'pending' : ''}`} aria-pressed={pumpOn} aria-busy={pendingActuators.pump} disabled={pendingActuators.pump} onClick={() => handleActuator('pump', pumpOn)}></button>
                       </div>
                     </div>
                   </section>
