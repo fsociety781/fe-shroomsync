@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">shroomsyn</string>
+    <string name="title_activity_main">shroomsyn</string>
+    <string name="package_name">com.shroomsync.app</string>
+    <string name="custom_url_scheme">com.shroomsync.app</string>
+</resources>

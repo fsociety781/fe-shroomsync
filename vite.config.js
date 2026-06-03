@@ -1,9 +1,28 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import process from 'node:process'
+
+const backendTarget = process.env.VITE_API_PROXY_TARGET || 'http://localhost:3000'
+
+const proxy = {
+  '/api': {
+    target: backendTarget,
+    changeOrigin: true,
+    secure: false,
+  },
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    host: true,
+    proxy,
+  },
+  preview: {
+    host: true,
+    proxy,
+  },
   build: {
     rollupOptions: {
       output: {

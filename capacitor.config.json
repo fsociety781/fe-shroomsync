@@ -1,0 +1,10 @@
+{
+  "appId": "com.shroomsync.app",
+  "appName": "shroomsyn",
+  "webDir": "dist",
+  "allowMixedContent": true,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   /* Primary Colors */
@@ -6,6 +6,8 @@
   --warm-beige: #E7DCC6;
   --soft-beige: #F5EFE6;
   --sage-green: #6B8F71;
+  --sage-deep: #4F7458;
+  --sage-soft: rgba(107, 143, 113, 0.12);
   --dark-brown: #4E3A28;
   --text-primary: #2E2E2E;
   
@@ -15,11 +17,26 @@
   --bg-primary: #F9F7F4; /* Lighter background for the main canvas */
   --bg-secondary: #FFFFFF; /* White for cards to pop against soft background */
   --border-color: rgba(123, 94, 60, 0.15); 
+  --button-primary: #5F7F65;
+  --button-primary-hover: #4F7458;
+  --button-primary-contrast: #FFFFFF;
+  --button-soft: #F5EFE6;
+  --button-soft-hover: #ECE1CE;
+  --button-border: rgba(95, 127, 101, 0.22);
   
   /* Status Colors */
   --success: var(--sage-green);
   --error: #E55353;
   --warning: #F5A623;
+
+  /* Chart Monitor Theme */
+  --chart-panel: #FFFFFF;
+  --chart-panel-deep: #F5EFE6;
+  --chart-text: #2E2E2E;
+  --chart-muted: rgba(123, 94, 60, 0.62);
+  --chart-temp-line: #BFD66B;
+  --chart-hum-line: #87BFA7;
+  --chart-border: rgba(123, 94, 60, 0.15);
 
   /* Shadows for premium glassmorphism/soft UI feel */
   --shadow-sm: 0 1px 3px rgba(123, 94, 60, 0.05);
@@ -38,13 +55,32 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img,
+svg {
+  max-width: 100%;
 }
 
 /* Custom Scrollbar */
@@ -63,4 +99,39 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--earth-brown);
+}
+
+/* Mobile-Responsive Utilities */
+@media (max-width: 1024px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  :root {
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
