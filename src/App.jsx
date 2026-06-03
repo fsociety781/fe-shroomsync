@@ -60,9 +60,6 @@ const DASHBOARD_LATEST_REFRESH_MS = config.polling.dashboardLatestMs;
 const DASHBOARD_HISTORY_REFRESH_MS = config.polling.dashboardHistoryMs;
 const TELEMETRY_LATEST_REFRESH_MS = config.polling.telemetryLatestMs;
 const TELEMETRY_HISTORY_REFRESH_MS = config.polling.telemetryHistoryMs;
-const CONTROL_STATUS_REFRESH_MS = config.polling.controlStatusMs;
-const CONTROL_ACTION_GRACE_MS = config.polling.controlActionGraceMs;
-const ACTUATOR_STATE_STORAGE_PREFIX = 'shroomsync_actuator_state_';
 const REALTIME_SENSOR_HISTORY_LIMIT = 300;
 const REALTIME_LOG_LIMIT = 60;
 
@@ -175,37 +172,6 @@ const hasActuatorState = (record) => (
   || record?.fan != null
   || record?.actuator != null
 );
-
-const getActuatorStorageKey = (deviceId) => `${ACTUATOR_STATE_STORAGE_PREFIX}${deviceId}`;
-
-const readStoredActuatorState = (deviceId) => {
-  if (!deviceId) return null;
-  try {
-    const rawValue = localStorage.getItem(getActuatorStorageKey(deviceId));
-    return rawValue ? JSON.parse(rawValue) : null;
-  } catch {
-    return null;
-  }
-};
-
-const writeStoredActuatorState = (deviceId, patch) => {
-  if (!deviceId) return null;
-
-  const current = readStoredActuatorState(deviceId) || {};
-  const next = {
-    ...current,
-    ...patch,
-    updatedAt: patch.updatedAt ?? Date.now(),
-  };
-
-  try {
-    localStorage.setItem(getActuatorStorageKey(deviceId), JSON.stringify(next));
-  } catch {
-    // localStorage can fail in private contexts; UI state still updates in memory.
-  }
-
-  return next;
-};
 
 const isActiveValue = (value) => {
   if (typeof value === 'boolean') return value;
@@ -600,6 +566,15 @@ const compactPayload = (payload = {}) => Object.fromEntries(
 );
 
 const readEntityId = (entity = {}) => entity.id || entity.cycleId || entity.harvestId;
+
+const readDeviceFromResponse = (payload) => {
+  const candidate = payload?.data?.data?.device
+    || payload?.data?.device
+    || payload?.device
+    || payload;
+
+  return candidate && (candidate.deviceId || candidate.id) ? candidate : null;
+};
 
 const chartTooltipFormatter = (value, name) => {
   const formattedValue = Number(value).toFixed(2);
@@ -2417,7 +2392,6 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
   const [timeRange, setTimeRange] = useState('10 Menit');
   const [latestSensor, setLatestSensor] = useState({ temperature: '--', humidity: '--' });
   const [sensorHistory, setSensorHistory] = useState([]);
-  const [actuatorLatest, setActuatorLatest] = useState({ mistPump: false, floorPump: false });
   const [historyLogs, setHistoryLogs] = useState([]);
   const [showAllHistoryLogs, setShowAllHistoryLogs] = useState(false);
 
@@ -2445,8 +2419,8 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
       })
       .sort((a, b) => a.readingDate - b.readingDate)
   );
-  const mistPumpOn = isActiveValue(actuatorLatest.mistPump ?? actuatorLatest.pump ?? actuatorLatest.pumpStatus);
-  const floorPumpOn = isActiveValue(actuatorLatest.floorPump ?? actuatorLatest.fan ?? actuatorLatest.floorPumpStatus);
+  const mistPumpOn = isActiveValue(selectedDevice?.pumpStatus);
+  const floorPumpOn = isActiveValue(selectedDevice?.floorPumpStatus);
   const canToggleHistoryLogs = historyLogs.length > 10;
   const visibleHistoryLogs = showAllHistoryLogs ? historyLogs : historyLogs.slice(0, 10);
 
@@ -2463,13 +2437,8 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
 
     const fetchLatest = async () => {
       try {
-        const [sensor, actuator] = await Promise.allSettled([
-          api.telemetry.getSensorLatest(selectedDeviceId),
-          api.telemetry.getHistoryLatest(selectedDeviceId),
-        ]);
-
-        if (sensor.status === 'fulfilled' && sensor.value) setLatestSensor(sensor.value);
-        if (actuator.status === 'fulfilled' && actuator.value) setActuatorLatest(actuator.value);
+        const sensor = await api.telemetry.getSensorLatest(selectedDeviceId);
+        if (sensor) setLatestSensor(sensor);
       } catch (error) {
         console.error('Latest telemetry fetch failed:', error);
       }
@@ -2518,7 +2487,6 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
     if (!selectedDeviceId || liveHistoryEvent?.deviceId !== selectedDeviceId) return;
 
     window.setTimeout(() => {
-      setActuatorLatest(liveHistoryEvent.record);
       setHistoryLogs((prevLogs) => (
         mergeRealtimeRecord(prevLogs, liveHistoryEvent.record, { limit: REALTIME_LOG_LIMIT, newestFirst: true })
       ));
@@ -3080,7 +3048,7 @@ const ProfilContent = ({ onMenuToggle }) => {
 };
 
 // --- 7. Kontrol Content ---
-const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenuToggle, liveHistoryEvent }) => {
+const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, updateDevice, onMenuToggle }) => {
   const [opMode, setOpMode] = useState(2); // 1=Manual, 2=Auto, 3=Hybrid
   const [activeTab, setActiveTab] = useState(() => {
     // Load saved tab from localStorage
@@ -3100,37 +3068,8 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenu
     minS: 26, midS: 28, minK: 80, midK: 90
   });
 
-  // Manual States
-  const [pumpOn, setPumpOn] = useState(false);
-  const [fanOn, setFanOn] = useState(false);
+  // Manual actuator request state
   const [pendingActuators, setPendingActuators] = useState({ pump: false, fan: false });
-
-  // Track last user action time to prevent polling overwrite while firmware applies a command.
-  const [lastActionTime, setLastActionTime] = useState(0);
-
-  useEffect(() => {
-    let updateId;
-
-    if (!selectedDeviceId) {
-      updateId = window.setTimeout(() => {
-        setPumpOn(false);
-        setFanOn(false);
-        setLastActionTime(0);
-      }, 0);
-      return () => window.clearTimeout(updateId);
-    }
-
-    const savedState = readStoredActuatorState(selectedDeviceId);
-    if (!savedState) return undefined;
-
-    updateId = window.setTimeout(() => {
-      if (savedState.pumpOn != null) setPumpOn(Boolean(savedState.pumpOn));
-      if (savedState.fanOn != null) setFanOn(Boolean(savedState.fanOn));
-      setLastActionTime(Number(savedState.updatedAt) || 0);
-    }, 0);
-
-    return () => window.clearTimeout(updateId);
-  }, [selectedDeviceId]);
 
   // Schedule States
   const [timerMenit, setTimerMenit] = useState(1);
@@ -3176,6 +3115,18 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenu
     province: 'Jawa Barat'
   }), []); // Rancaekek Wetan, Bandung
 
+  const selectedControlDevice = useMemo(
+    () => devices.find((device) => (device.deviceId || device.id) === selectedDeviceId),
+    [devices, selectedDeviceId]
+  );
+  const currentControlMode = selectedControlDevice?.config?.controlMode ?? opMode;
+  const actuatorControlsAvailable = currentControlMode === 1 || currentControlMode === 3;
+  const pumpOn = isActiveValue(selectedControlDevice?.pumpStatus);
+  const fanOn = isActiveValue(selectedControlDevice?.floorPumpStatus);
+  const actuatorUpdatedLabel = selectedControlDevice?.actuatorUpdatedAt
+    ? formatDateTime(selectedControlDevice.actuatorUpdatedAt)
+    : 'Belum tersedia';
+
   useEffect(() => {
     if (!selectedDeviceId) return;
 
@@ -3183,7 +3134,9 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenu
     const loadControlConfig = async () => {
       try {
         const device = await api.devices.get(selectedDeviceId);
-        if (cancelled || !device?.config) return;
+        if (cancelled) return;
+        if (device) updateDevice(device);
+        if (!device?.config) return;
 
         const { config } = device;
         setOpMode(config.controlMode ?? 2);
@@ -3241,7 +3194,7 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenu
     return () => {
       cancelled = true;
     };
-  }, [selectedDeviceId]);
+  }, [selectedDeviceId, updateDevice]);
 
   // Save scheduleAuto state to localStorage whenever it changes
   useEffect(() => {
@@ -3262,113 +3215,20 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenu
     }
   }, [weatherData, selectedDeviceId]);
 
-  // Sync actuator status from device while manual override is active.
-  useEffect(() => {
-    if (!selectedDeviceId) return;
-    if (opMode !== 1 && opMode !== 3) return;
-
-    let cancelled = false;
-    const syncActuatorStatus = async () => {
-      try {
-        // Skip update if user just performed action so stale telemetry cannot flip the switch back.
-        const timeSinceLastAction = Date.now() - lastActionTime;
-        if (timeSinceLastAction < CONTROL_ACTION_GRACE_MS) return;
-
-        const latest = await api.telemetry.getHistoryLatest(selectedDeviceId);
-        if (cancelled || !latest) return;
-
-        // Read actuator states from device telemetry (handles various field names)
-        const pumpStatus = latest?.pumpStatus ?? latest?.mistPump ?? latest?.pump ?? latest?.actuator?.pump;
-        const fanStatus = latest?.floorPumpStatus ?? latest?.floorPump ?? latest?.fan ?? latest?.actuator?.fan;
-        const storedState = readStoredActuatorState(selectedDeviceId);
-        const telemetryTime = getReadingDate(latest)?.getTime() ?? 0;
-
-        if (storedState?.updatedAt && (!telemetryTime || telemetryTime < storedState.updatedAt)) {
-          if (storedState.pumpOn != null) setPumpOn(Boolean(storedState.pumpOn));
-          if (storedState.fanOn != null) setFanOn(Boolean(storedState.fanOn));
-          return;
-        }
-
-        const nextState = {};
-        if (pumpStatus != null) {
-          nextState.pumpOn = isActiveValue(pumpStatus);
-          setPumpOn(nextState.pumpOn);
-        }
-        if (fanStatus != null) {
-          nextState.fanOn = isActiveValue(fanStatus);
-          setFanOn(nextState.fanOn);
-        }
-        if (Object.keys(nextState).length > 0) {
-          writeStoredActuatorState(selectedDeviceId, {
-            ...nextState,
-            updatedAt: telemetryTime || Date.now(),
-          });
-        }
-      } catch {
-        // Silent fail - don't spam errors for background sync
-      }
-    };
-
-    syncActuatorStatus(); // Initial sync
-    const interval = setInterval(syncActuatorStatus, CONTROL_STATUS_REFRESH_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [selectedDeviceId, opMode, lastActionTime]);
-
-  useEffect(() => {
-    if (!selectedDeviceId || liveHistoryEvent?.deviceId !== selectedDeviceId) return;
-    if (!hasActuatorState(liveHistoryEvent.record)) return;
-    if (liveHistoryEvent.receivedAt < lastActionTime) return;
-
-    const pumpStatus = liveHistoryEvent.record?.pumpStatus
-      ?? liveHistoryEvent.record?.mistPump
-      ?? liveHistoryEvent.record?.pump
-      ?? liveHistoryEvent.record?.actuator?.pump;
-    const fanStatus = liveHistoryEvent.record?.floorPumpStatus
-      ?? liveHistoryEvent.record?.floorPump
-      ?? liveHistoryEvent.record?.fan
-      ?? liveHistoryEvent.record?.actuator?.fan;
-    const storedState = readStoredActuatorState(selectedDeviceId);
-    const telemetryTime = getReadingDate(liveHistoryEvent.record)?.getTime() ?? liveHistoryEvent.receivedAt;
-
-    if (storedState?.updatedAt && telemetryTime < storedState.updatedAt) {
-      const updateId = window.setTimeout(() => {
-        if (storedState.pumpOn != null) setPumpOn(Boolean(storedState.pumpOn));
-        if (storedState.fanOn != null) setFanOn(Boolean(storedState.fanOn));
-      }, 0);
-      return () => window.clearTimeout(updateId);
-    }
-
-    const updateId = window.setTimeout(() => {
-      const nextState = {};
-      if (pumpStatus != null) {
-        nextState.pumpOn = isActiveValue(pumpStatus);
-        setPumpOn(nextState.pumpOn);
-      }
-      if (fanStatus != null) {
-        nextState.fanOn = isActiveValue(fanStatus);
-        setFanOn(nextState.fanOn);
-      }
-      if (Object.keys(nextState).length > 0) {
-        writeStoredActuatorState(selectedDeviceId, {
-          ...nextState,
-          updatedAt: telemetryTime || Date.now(),
-        });
-      }
-    }, 0);
-
-    return () => window.clearTimeout(updateId);
-  }, [lastActionTime, liveHistoryEvent, selectedDeviceId]);
-
   const handleSaveMode = async (mode) => {
     if (!selectedDeviceId) {
       setToast({ message: 'Pilih kumbung terlebih dahulu', type: 'warning' });
       return;
     }
     try {
-      await api.control.setMode(selectedDeviceId, mode);
+      const result = await api.control.setMode(selectedDeviceId, mode);
+      const updatedDevice = readDeviceFromResponse(result);
+      if (updatedDevice) {
+        updateDevice(updatedDevice);
+      } else {
+        const refreshedDevice = await api.devices.get(selectedDeviceId);
+        updateDevice(refreshedDevice);
+      }
       setOpMode(mode);
       const modeNames = { 1: 'Manual', 2: 'Auto', 3: 'Hybrid' };
       setToast({ message: `✓ Mode berubah ke ${modeNames[mode]}`, type: 'success' });
@@ -3712,57 +3572,40 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenu
       return;
     }
 
+    if (!actuatorControlsAvailable) {
+      setToast({ message: 'Kontrol manual aktuator hanya tersedia di mode Manual atau Hybrid', type: 'warning' });
+      return;
+    }
+
     if (pendingActuators[actuator]) return;
 
     const newState = !currentState;
-    const setLocalState = actuator === 'pump' ? setPumpOn : setFanOn;
     const label = actuator === 'pump' ? 'Pompa Kabut' : 'Pompa Lantai';
-    const actionTime = Date.now();
-    const storagePatch = actuator === 'pump'
-      ? { pumpOn: newState }
-      : { fanOn: newState };
-    const revertPatch = actuator === 'pump'
-      ? { pumpOn: currentState }
-      : { fanOn: currentState };
 
-    setLastActionTime(actionTime);
     setPendingActuators((prev) => ({ ...prev, [actuator]: true }));
-    setLocalState(newState);
-    writeStoredActuatorState(selectedDeviceId, {
-      ...storagePatch,
-      updatedAt: actionTime,
-    });
     setToast({ message: `${label} ${newState ? 'ON' : 'OFF'} sedang dikirim...`, type: 'info' });
 
     try {
-      if (actuator === 'pump') {
-        await api.control.controlPump(selectedDeviceId, { on: newState });
-      } else {
-        await api.control.controlFan(selectedDeviceId, { on: newState });
-      }
+      const result = actuator === 'pump'
+        ? await api.control.controlPump(selectedDeviceId, { on: newState })
+        : await api.control.controlFan(selectedDeviceId, { on: newState });
 
-      const confirmedAt = Date.now();
-      setLastActionTime(confirmedAt);
-      writeStoredActuatorState(selectedDeviceId, {
-        ...storagePatch,
-        updatedAt: confirmedAt,
-      });
+      const updatedDevice = readDeviceFromResponse(result);
+      if (updatedDevice) {
+        updateDevice(updatedDevice);
+      } else {
+        const refreshedDevice = await api.devices.get(selectedDeviceId);
+        updateDevice(refreshedDevice);
+      }
       setToast({ message: `✓ ${label} ${newState ? 'ON' : 'OFF'}`, type: 'success' });
     } catch (e) {
       console.error(e);
-      setLocalState(currentState);
-      setLastActionTime(0);
-      writeStoredActuatorState(selectedDeviceId, {
-        ...revertPatch,
-        updatedAt: Date.now(),
-      });
       setToast({ message: `Gagal mengontrol ${label.toLowerCase()}`, type: 'error' });
     } finally {
       setPendingActuators((prev) => ({ ...prev, [actuator]: false }));
     }
   };
 
-  const selectedControlDevice = devices.find((device) => (device.deviceId || device.id) === selectedDeviceId);
   const modeDescriptions = {
     1: 'Kontrol aktuator sepenuhnya melalui switch manual.',
     2: 'Sistem menjalankan aktuator berdasarkan setpoint suhu dan kelembaban.',
@@ -3822,36 +3665,36 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenu
                 <div className="control-card-header">
                   <div>
                     <h3>Mode Operasi Sistem</h3>
-                    <p>Mode saat ini: {opMode === 1 ? 'Manual' : opMode === 2 ? 'Auto' : 'Hybrid'}</p>
+                    <p>Mode saat ini: {currentControlMode === 1 ? 'Manual' : currentControlMode === 2 ? 'Auto' : 'Hybrid'}</p>
                   </div>
                 </div>
                 <div className="mode-selector">
-                  <button className={`mode-btn ${opMode === 1 ? 'active' : ''}`} onClick={() => handleSaveMode(1)}>
+                  <button className={`mode-btn ${currentControlMode === 1 ? 'active' : ''}`} onClick={() => handleSaveMode(1)}>
                     <span>Manual</span>
                     <small>Switch aktuator langsung</small>
                   </button>
-                  <button className={`mode-btn ${opMode === 2 ? 'active' : ''}`} onClick={() => handleSaveMode(2)}>
+                  <button className={`mode-btn ${currentControlMode === 2 ? 'active' : ''}`} onClick={() => handleSaveMode(2)}>
                     <span>Auto</span>
                     <small>Ikuti setpoint sensor</small>
                   </button>
-                  <button className={`mode-btn ${opMode === 3 ? 'active' : ''}`} onClick={() => handleSaveMode(3)}>
+                  <button className={`mode-btn ${currentControlMode === 3 ? 'active' : ''}`} onClick={() => handleSaveMode(3)}>
                     <span>Hybrid</span>
                     <small>Auto dengan override</small>
                   </button>
                 </div>
                 <div className="info-alert control-note">
                   <Info size={16} className="info-icon" />
-                  <p>{modeDescriptions[opMode]}</p>
+                  <p>{modeDescriptions[currentControlMode]}</p>
                 </div>
               </section>
 
-              <div className={`control-layout ${opMode === 1 ? 'manual-only' : ''} ${opMode === 2 ? 'auto-only' : ''} ${opMode === 3 ? 'hybrid' : ''}`}>
-                {(opMode === 1 || opMode === 3) && (
+              <div className={`control-layout ${currentControlMode === 1 ? 'manual-only' : ''} ${currentControlMode === 2 ? 'auto-only' : ''} ${currentControlMode === 3 ? 'hybrid' : ''}`}>
+                {actuatorControlsAvailable ? (
                   <section className="control-card">
                     <div className="control-card-header">
                       <div>
                         <h3>Kontrol Manual Aktuator</h3>
-                        <p>Override perangkat secara langsung.</p>
+                        <p>Status terakhir: {actuatorUpdatedLabel}</p>
                       </div>
                     </div>
                     <div className="actuator-list">
@@ -3863,7 +3706,7 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenu
                             <p className="text-muted">{pendingActuators.fan ? 'Mengirim perintah...' : fanOn ? 'Aktif' : 'Nonaktif'} untuk membasahi lantai kumbung.</p>
                           </div>
                         </div>
-                        <button type="button" className={`toggle-switch large ${fanOn ? 'active' : ''} ${pendingActuators.fan ? 'pending' : ''}`} aria-pressed={fanOn} aria-busy={pendingActuators.fan} disabled={pendingActuators.fan} onClick={() => handleActuator('fan', fanOn)}></button>
+                        <button type="button" className={`toggle-switch large ${fanOn ? 'active' : ''} ${pendingActuators.fan ? 'pending' : ''}`} aria-pressed={fanOn} aria-busy={pendingActuators.fan} disabled={pendingActuators.fan || !actuatorControlsAvailable} onClick={() => handleActuator('fan', fanOn)}></button>
                       </div>
 
                       <div className="actuator-card">
@@ -3874,13 +3717,48 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, onMenu
                             <p className="text-muted">{pendingActuators.pump ? 'Mengirim perintah...' : pumpOn ? 'Aktif' : 'Nonaktif'} untuk menaikkan kelembaban ruang.</p>
                           </div>
                         </div>
-                        <button type="button" className={`toggle-switch large ${pumpOn ? 'active' : ''} ${pendingActuators.pump ? 'pending' : ''}`} aria-pressed={pumpOn} aria-busy={pendingActuators.pump} disabled={pendingActuators.pump} onClick={() => handleActuator('pump', pumpOn)}></button>
+                        <button type="button" className={`toggle-switch large ${pumpOn ? 'active' : ''} ${pendingActuators.pump ? 'pending' : ''}`} aria-pressed={pumpOn} aria-busy={pendingActuators.pump} disabled={pendingActuators.pump || !actuatorControlsAvailable} onClick={() => handleActuator('pump', pumpOn)}></button>
+                      </div>
+                    </div>
+                  </section>
+                ) : (
+                  <section className="control-card">
+                    <div className="control-card-header">
+                      <div>
+                        <h3>Kontrol Manual Aktuator</h3>
+                        <p>Status terakhir: {actuatorUpdatedLabel}</p>
+                      </div>
+                    </div>
+                    <div className="info-alert control-note">
+                      <Info size={16} className="info-icon" />
+                      <p>Kontrol manual aktuator hanya tersedia di mode Manual atau Hybrid.</p>
+                    </div>
+                    <div className="actuator-list">
+                      <div className="actuator-card">
+                        <div className="actuator-info">
+                          <div className={`actuator-icon ${fanOn ? 'active floor' : ''}`}><Waves size={24} /></div>
+                          <div>
+                            <h4>Pompa Lantai (Floor Pump)</h4>
+                            <p className="text-muted">{fanOn ? 'Aktif' : 'Nonaktif'} untuk membasahi lantai kumbung.</p>
+                          </div>
+                        </div>
+                        <button type="button" className={`toggle-switch large ${fanOn ? 'active' : ''}`} aria-pressed={fanOn} disabled></button>
+                      </div>
+                      <div className="actuator-card">
+                        <div className="actuator-info">
+                          <div className={`actuator-icon ${pumpOn ? 'active pump' : ''}`}><Droplet size={24} /></div>
+                          <div>
+                            <h4>Pompa Kabut (Mist Pump)</h4>
+                            <p className="text-muted">{pumpOn ? 'Aktif' : 'Nonaktif'} untuk menaikkan kelembaban ruang.</p>
+                          </div>
+                        </div>
+                        <button type="button" className={`toggle-switch large ${pumpOn ? 'active' : ''}`} aria-pressed={pumpOn} disabled></button>
                       </div>
                     </div>
                   </section>
                 )}
 
-                {(opMode === 2 || opMode === 3) && (
+                {(currentControlMode === 2 || currentControlMode === 3) && (
                   <section className="setpoint-grid">
                     <div className="control-card setpoint-card">
                       <div className="control-card-header">
@@ -4281,7 +4159,7 @@ function App() {
   }, []);
 
   // REST polling only for local web/dev testing.
-  const { devices, loading: devicesLoading, error: devicesError, refetch, socketConnected } = useDevices({
+  const { devices, loading: devicesLoading, error: devicesError, refetch, updateDevice, socketConnected } = useDevices({
     enableSocket: false,
     onSensorTelemetry: handleSensorTelemetry,
     onHistoryTelemetry: handleHistoryTelemetry,
@@ -4330,7 +4208,7 @@ function App() {
         {activePage === 'kumbung' && <KumbungContent setActivePage={setActivePage} devices={devices} refetchDevices={refetch} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} onMenuToggle={toggleSidebar} />}
         {activePage === 'monitoring' && <MonitoringContent setActivePage={setActivePage} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} selectedDevice={selectedDevice} onMenuToggle={toggleSidebar} liveSensorEvent={liveSensorEvent} liveHistoryEvent={liveHistoryEvent} />}
         {activePage === 'siklus' && <SiklusPanenContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} selectedDevice={selectedDevice} onMenuToggle={toggleSidebar} />}
-        {activePage === 'kontrol' && <KontrolContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} onMenuToggle={toggleSidebar} liveHistoryEvent={liveHistoryEvent} />}
+        {activePage === 'kontrol' && <KontrolContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} updateDevice={updateDevice} onMenuToggle={toggleSidebar} />}
         {activePage === 'analitik' && <AnalitikContent onMenuToggle={toggleSidebar} />}
         {activePage === 'notifikasi' && <NotifikasiContent onMenuToggle={toggleSidebar} />}
         {activePage === 'profil' && <ProfilContent onMenuToggle={toggleSidebar} />}

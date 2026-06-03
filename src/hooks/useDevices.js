@@ -42,6 +42,30 @@ function useDevices(options = {}) {
     }
   }, []);
 
+  const updateDevice = useCallback((updatedDevice) => {
+    if (!updatedDevice) return;
+
+    const updatedDeviceId = updatedDevice.deviceId || updatedDevice.id;
+    if (!updatedDeviceId) return;
+
+    setDevices((currentDevices) => {
+      let found = false;
+      const nextDevices = currentDevices.map((device) => {
+        const deviceId = device.deviceId || device.id;
+        if (deviceId !== updatedDeviceId) return device;
+
+        found = true;
+        return {
+          ...device,
+          ...updatedDevice,
+          config: updatedDevice.config || device.config || null,
+        };
+      });
+
+      return found ? nextDevices : [updatedDevice, ...currentDevices];
+    });
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -81,6 +105,7 @@ function useDevices(options = {}) {
     loading,
     error,
     refetch: fetchDevices,
+    updateDevice,
     socketConnected: false,
   };
 }

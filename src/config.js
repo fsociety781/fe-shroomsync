@@ -15,6 +15,11 @@ const API_CONFIG = {
 
 const envName = import.meta.env.VITE_APP_ENV || 'development';
 const envConfig = API_CONFIG[envName] || API_CONFIG.development;
+const resolvedBaseURL = envName === 'development'
+  ? envConfig.baseURL
+  : import.meta.env.VITE_API_BASE_URL || envConfig.baseURL;
+const skipTunnelWarning = import.meta.env.VITE_SKIP_TUNNEL_WARNING === 'true'
+  || /devtunnels\.ms/i.test(resolvedBaseURL);
 
 const toPositiveNumber = (value, fallback) => {
   const numberValue = Number(value);
@@ -24,12 +29,11 @@ const toPositiveNumber = (value, fallback) => {
 const config = {
   ...envConfig,
   env: envName,
-  baseURL: envName === 'development'
-    ? envConfig.baseURL
-    : import.meta.env.VITE_API_BASE_URL || envConfig.baseURL,
+  baseURL: resolvedBaseURL,
   wsURL: '',
   timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || 10000),
   enableSocket: false,
+  skipTunnelWarning,
   polling: {
     devicesMs: toPositiveNumber(import.meta.env.VITE_DEVICES_POLL_MS, 5000),
     dashboardLatestMs: toPositiveNumber(import.meta.env.VITE_DASHBOARD_LATEST_POLL_MS, 2000),
