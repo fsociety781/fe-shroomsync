@@ -3,24 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShroomSync — Visual Flowchart & Export Tool</title>
+  <title>ShroomSync — Diagram & Flowchart Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     :root {
-      --bg-dark: #0f1512;
-      --bg-card: #18221c;
-      --bg-card-hover: #1f2d25;
-      --primary: #5a9e6f;
-      --primary-light: #7ec293;
-      --primary-dim: rgba(90, 158, 111, 0.15);
-      --border: rgba(90, 158, 111, 0.25);
-      --text-main: #e6f0ea;
-      --text-muted: #94a399;
-      --accent-gold: #eab308;
-      --accent-blue: #38bdf8;
+      --bg-dark: #0c120e;
+      --bg-card: #151e18;
+      --bg-card-hover: #1d2a22;
+      --primary: #4a9363;
+      --primary-hover: #3b7c52;
+      --primary-light: #72cb92;
+      --primary-dim: rgba(74, 147, 99, 0.16);
+      --border: rgba(74, 147, 99, 0.28);
+      --text-main: #edf5f0;
+      --text-muted: #94a397;
     }
 
     * {
@@ -33,27 +32,25 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
       background-color: var(--bg-dark);
       color: var(--text-main);
-      line-height: 1.6;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
 
-    /* Top Navigation Header */
     header {
-      background: rgba(24, 34, 28, 0.85);
+      background: rgba(21, 30, 24, 0.95);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
-      padding: 16px 24px;
+      padding: 14px 24px;
       position: sticky;
       top: 0;
       z-index: 100;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
+      gap: 16px;
     }
 
     .brand {
@@ -63,15 +60,15 @@
     }
 
     .brand-logo {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
       background: var(--primary-dim);
       border: 1px solid var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 22px;
     }
 
     .brand h1 {
@@ -81,15 +78,15 @@
     }
 
     .brand p {
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       color: var(--text-muted);
     }
 
-    .guide-badge {
+    .guide-btn {
       background: rgba(234, 179, 8, 0.12);
-      border: 1px solid rgba(234, 179, 8, 0.3);
+      border: 1px solid rgba(234, 179, 8, 0.35);
       color: #facc15;
-      padding: 6px 14px;
+      padding: 8px 16px;
       border-radius: 20px;
       font-size: 0.82rem;
       font-weight: 600;
@@ -97,27 +94,24 @@
       align-items: center;
       gap: 6px;
       cursor: pointer;
-      text-decoration: none;
       transition: all 0.2s;
     }
 
-    .guide-badge:hover {
+    .guide-btn:hover {
       background: rgba(234, 179, 8, 0.22);
       transform: translateY(-1px);
     }
 
-    /* Layout Content */
-    .app-container {
+    .app-layout {
       display: flex;
       flex: 1;
-      height: calc(100vh - 71px);
+      height: calc(100vh - 69px);
       overflow: hidden;
     }
 
-    /* Sidebar Navigation */
     .sidebar {
       width: 320px;
-      min-width: 300px;
+      min-width: 290px;
       background: var(--bg-card);
       border-right: 1px solid var(--border);
       display: flex;
@@ -127,28 +121,31 @@
 
     .sidebar-title {
       padding: 16px 20px 10px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.2px;
       color: var(--primary-light);
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .nav-list {
       list-style: none;
       padding: 0 12px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .nav-item {
-      padding: 12px 16px;
-      margin-bottom: 6px;
-      border-radius: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
       cursor: pointer;
       border: 1px solid transparent;
       transition: all 0.18s;
       display: flex;
       flex-direction: column;
       gap: 4px;
+      user-select: none;
     }
 
     .nav-item:hover {
@@ -162,35 +159,52 @@
     }
 
     .nav-item-title {
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-weight: 600;
       color: var(--text-main);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
+      line-height: 1.35;
     }
 
     .nav-item.active .nav-item-title {
       color: #fff;
     }
 
-    .nav-item-desc {
-      font-size: 0.76rem;
-      color: var(--text-muted);
+    .nav-item-badge {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--primary-light);
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-weight: 700;
+      flex-shrink: 0;
     }
 
-    /* Main Diagram Viewport */
-    .main-viewport {
+    .nav-item.active .nav-item-badge {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .nav-item-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      padding-left: 24px;
+    }
+
+    .viewport {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      background: radial-gradient(circle at top right, rgba(90, 158, 111, 0.08), transparent 45%), #0a0f0c;
+      background: radial-gradient(circle at 85% 15%, rgba(74, 147, 99, 0.1), transparent 40%), #0c120e;
     }
 
-    .viewport-toolbar {
+    .toolbar {
       padding: 14px 24px;
-      background: rgba(24, 34, 28, 0.6);
+      background: rgba(21, 30, 24, 0.75);
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
@@ -199,18 +213,18 @@
       gap: 12px;
     }
 
-    .diagram-info h2 {
-      font-size: 1.1rem;
+    .toolbar-info h2 {
+      font-size: 1.15rem;
       font-weight: 700;
       color: #fff;
     }
 
-    .diagram-info p {
+    .toolbar-info p {
       font-size: 0.8rem;
       color: var(--text-muted);
     }
 
-    .action-group {
+    .toolbar-buttons {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -218,7 +232,7 @@
     }
 
     .btn {
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 8px;
       font-size: 0.82rem;
       font-weight: 600;
@@ -231,74 +245,139 @@
       font-family: inherit;
     }
 
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-    }
-
-    .btn-primary:hover {
-      background: #4a8c5f;
-      transform: translateY(-1px);
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 255, 255, 0.12);
-      color: var(--text-main);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.12);
-      transform: translateY(-1px);
+    .btn:active {
+      transform: scale(0.97);
     }
 
     .btn-drawio {
-      background: rgba(240, 138, 0, 0.15);
-      border-color: rgba(240, 138, 0, 0.4);
+      background: rgba(249, 115, 22, 0.15);
+      border-color: rgba(249, 115, 22, 0.45);
       color: #fb923c;
     }
 
     .btn-drawio:hover {
-      background: rgba(240, 138, 0, 0.25);
-      transform: translateY(-1px);
+      background: rgba(249, 115, 22, 0.25);
     }
 
-    /* Diagram Canvas */
-    .diagram-canvas {
+    .btn-svg {
+      background: rgba(2, 132, 199, 0.15);
+      border-color: rgba(2, 132, 199, 0.45);
+      color: #38bdf8;
+    }
+
+    .btn-svg:hover {
+      background: rgba(2, 132, 199, 0.25);
+    }
+
+    .btn-png {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-png:hover {
+      background: var(--primary-hover);
+    }
+
+    .canvas-area {
       flex: 1;
       padding: 24px;
       overflow: auto;
       display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
     }
 
-    .diagram-wrapper {
+    .zoom-controls {
+      position: absolute;
+      top: 16px;
+      right: 24px;
+      display: flex;
+      gap: 6px;
+      background: rgba(21, 30, 24, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+      z-index: 10;
+    }
+
+    .zoom-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      transition: background 0.15s;
+    }
+
+    .zoom-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .diagram-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      padding: 32px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+      min-width: 480px;
       max-width: 100%;
-      min-width: 600px;
       overflow-x: auto;
+      transform-origin: top center;
+      transition: transform 0.15s ease-out;
     }
 
-    /* Code drawer (Collapsible) */
-    .code-preview-panel {
+    .diagram-card svg {
+      max-width: none !important;
+      height: auto !important;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      gap: 16px;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(74, 147, 99, 0.2);
+      border-top-color: var(--primary-light);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .code-panel {
       border-top: 1px solid var(--border);
-      background: #0d120f;
-      max-height: 180px;
+      background: #090e0b;
+      max-height: 140px;
       overflow-y: auto;
       padding: 12px 20px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       color: #a7f3d0;
       white-space: pre-wrap;
       user-select: all;
     }
 
-    /* Toast Notification */
     #toast {
       position: fixed;
       bottom: 24px;
@@ -307,16 +386,16 @@
       color: #fff;
       padding: 12px 20px;
       border-radius: 10px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-      font-size: 0.88rem;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+      font-size: 0.85rem;
       font-weight: 600;
       display: flex;
       align-items: center;
       gap: 8px;
-      transform: translateY(100px);
+      transform: translateY(120px);
       opacity: 0;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      z-index: 999;
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
     }
 
     #toast.show {
@@ -324,58 +403,57 @@
       opacity: 1;
     }
 
-    /* Instructions Modal */
-    .modal-overlay {
+    .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(6px);
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(8px);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 200;
+      z-index: 500;
       padding: 20px;
     }
 
-    .modal-overlay.open {
+    .modal-backdrop.active {
       display: flex;
     }
 
-    .modal-box {
+    .modal-window {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 20px;
-      max-width: 600px;
+      max-width: 640px;
       width: 100%;
       padding: 28px;
-      max-height: 90vh;
+      max-height: 88vh;
       overflow-y: auto;
-      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
     }
 
-    .modal-box h3 {
+    .modal-window h3 {
+      font-size: 1.25rem;
       color: #fff;
       margin-bottom: 8px;
-      font-size: 1.25rem;
     }
 
-    .step-list {
-      margin: 18px 0;
+    .modal-steps {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
+      margin: 18px 0;
     }
 
-    .step-item {
+    .step-card {
       background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.07);
       border-radius: 12px;
       padding: 14px 16px;
       display: flex;
-      gap: 14px;
+      gap: 12px;
     }
 
-    .step-num {
+    .step-badge {
       width: 28px;
       height: 28px;
       border-radius: 50%;
@@ -389,130 +467,134 @@
       flex-shrink: 0;
     }
 
-    .step-text h4 {
-      font-size: 0.95rem;
+    .step-content h4 {
+      font-size: 0.92rem;
       color: #fff;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
-    .step-text p {
-      font-size: 0.82rem;
+    .step-content p {
+      font-size: 0.8rem;
       color: var(--text-muted);
+      line-height: 1.45;
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Header -->
   <header>
     <div class="brand">
       <div class="brand-logo">🍄</div>
       <div>
         <h1>ShroomSync — Diagram & Flowchart Center</h1>
-        <p>Visualisasi Interaktif, Export SVG/PNG, dan Ekspor ke Draw.io</p>
+        <p>Visualisasi Interaktif, Export SVG/PNG, dan Ekspor Draw.io</p>
       </div>
     </div>
-    <div style="display: flex; gap: 10px; align-items: center;">
-      <button class="guide-badge" onclick="openModal()">
+    <div>
+      <button class="guide-btn" onclick="openModal()">
         💡 Cara Impor ke Draw.io / Miro
       </button>
     </div>
   </header>
 
-  <!-- App Body Layout -->
-  <div class="app-container">
-    <!-- Sidebar Menu -->
+  <div class="app-layout">
     <aside class="sidebar">
-      <div class="sidebar-title">Daftar Diagram Proyek</div>
+      <div class="sidebar-title">Daftar Diagram Flowchart</div>
       <ul class="nav-list" id="navList"></ul>
     </aside>
 
-    <!-- Main Viewport -->
-    <main class="main-viewport">
-      <div class="viewport-toolbar">
-        <div class="diagram-info">
-          <h2 id="currentTitle">Memuat Diagram...</h2>
-          <p id="currentDesc">Deskripsi diagram sistem</p>
+    <main class="viewport">
+      <div class="toolbar">
+        <div class="toolbar-info">
+          <h2 id="diagramTitle">Memuat Diagram...</h2>
+          <p id="diagramDesc">Deskripsi diagram sistem</p>
         </div>
-        <div class="action-group">
+        <div class="toolbar-buttons">
           <button class="btn btn-drawio" onclick="copyForDrawIo()">
-            📋 Salin Kode untuk Draw.io
+            📋 Salin untuk Draw.io
           </button>
-          <button class="btn btn-secondary" onclick="exportAsSvg()">
+          <button class="btn btn-svg" onclick="downloadSvg()">
             💾 Unduh File SVG
           </button>
-          <button class="btn btn-primary" onclick="exportAsPng()">
+          <button class="btn btn-png" onclick="downloadPng()">
             🖼️ Unduh Gambar PNG
           </button>
         </div>
       </div>
 
-      <!-- Diagram Canvas -->
-      <div class="diagram-canvas">
-        <div class="diagram-wrapper" id="diagramContainer">
-          <div id="mermaidOutput" class="mermaid"></div>
+      <div class="canvas-area">
+        <div class="zoom-controls">
+          <button class="zoom-btn" onclick="zoomIn()" title="Perbesar">+</button>
+          <button class="zoom-btn" onclick="zoomReset()" title="Reset Zoom">100%</button>
+          <button class="zoom-btn" onclick="zoomOut()" title="Perkecil">−</button>
+        </div>
+
+        <div class="diagram-card" id="diagramCard">
+          <div id="renderTarget">
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <span>Sedang merender diagram...</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Code Snippet Drawer -->
-      <div class="code-preview-panel" id="codePreview"></div>
+      <div class="code-panel" id="codePanel"></div>
     </main>
   </div>
 
-  <!-- Toast Element -->
   <div id="toast">
     <span>✓</span>
-    <span id="toastMsg">Teks berhasil disalin!</span>
+    <span id="toastText">Teks berhasil disalin!</span>
   </div>
 
-  <!-- Modal Tutorial Draw.io -->
-  <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <h3>Cara Ekspor / Impor ke Draw.io</h3>
+  <div class="modal-backdrop" id="modalBackdrop" onclick="closeModal(event)">
+    <div class="modal-window" onclick="event.stopPropagation()">
+      <h3>Cara Ekspor & Impor ke Draw.io / Miro</h3>
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
-        Draw.io mendukung impor diagram Mermaid secara native. Anda dapat mengedit shape, warna, teks, dan ukuran bebas setelah diimpor.
+        Draw.io (app.diagrams.net) mendukung impor langsung diagram Mermaid. Seluruh elemen kotak, teks, warna, dan garis konektor dapat disunting sesuka hati setelah diimpor.
       </p>
 
-      <div class="step-list">
-        <div class="step-item">
-          <div class="step-num">1</div>
-          <div class="step-text">
+      <div class="modal-steps">
+        <div class="step-card">
+          <div class="step-badge">1</div>
+          <div class="step-content">
             <h4>Salin Kode Diagram</h4>
-            <p>Pilih diagram yang Anda inginkan dari sidebar di kiri, lalu klik tombol <strong>"📋 Salin Kode untuk Draw.io"</strong>.</p>
+            <p>Pilih diagram yang diinginkan dari menu samping kiri, lalu klik tombol <strong>"📋 Salin untuk Draw.io"</strong>.</p>
           </div>
         </div>
-        <div class="step-item">
-          <div class="step-num">2</div>
-          <div class="step-text">
-            <h4>Buka Draw.io (Web atau Desktop)</h4>
+        <div class="step-card">
+          <div class="step-badge">2</div>
+          <div class="step-content">
+            <h4>Buka Draw.io</h4>
             <p>Kunjungi <a href="https://app.diagrams.net" target="_blank" style="color: var(--primary-light);">https://app.diagrams.net</a> atau buka ekstensi Draw.io di VS Code.</p>
           </div>
         </div>
-        <div class="step-item">
-          <div class="step-num">3</div>
-          <div class="step-text">
+        <div class="step-card">
+          <div class="step-badge">3</div>
+          <div class="step-content">
             <h4>Buka Menu Mermaid di Draw.io</h4>
-            <p>Di navbar atas Draw.io, klik menu: <strong>Arrange</strong> (Atur) &rarr; <strong>Insert</strong> (Sisipkan) &rarr; <strong>Advanced</strong> (Tingkat Lanjut) &rarr; <strong>Mermaid</strong>.</p>
+            <p>Klik menu atas: <strong>Arrange</strong> (Atur) &rarr; <strong>Insert</strong> (Sisipkan) &rarr; <strong>Advanced</strong> (Tingkat Lanjut) &rarr; <strong>Mermaid</strong>.</p>
           </div>
         </div>
-        <div class="step-item">
-          <div class="step-num">4</div>
-          <div class="step-text">
+        <div class="step-card">
+          <div class="step-badge">4</div>
+          <div class="step-content">
             <h4>Tempel & Sisipkan</h4>
-            <p>Paste kode yang telah disalin ke dalam kotak input Draw.io, kemudian tekan tombol <strong>Insert</strong>. Diagram siap diedit sesuka hati!</p>
+            <p>Paste kode yang telah disalin, lalu klik tombol <strong>Insert</strong>. Diagram langsung menjadi elemen shape Draw.io yang dapat dipindahkan dan diedit bebas!</p>
           </div>
         </div>
-        <div class="step-item">
-          <div class="step-num">💡</div>
-          <div class="step-text">
-            <h4>Metode Alternatif: Drag-and-Drop SVG</h4>
-            <p>Klik tombol <strong>"💾 Unduh File SVG"</strong> di halaman ini, lalu seret (drag-and-drop) file SVG tersebut langsung ke kanvas Draw.io atau Canva!</p>
+        <div class="step-card">
+          <div class="step-badge">💡</div>
+          <div class="step-content">
+            <h4>Metode Cepat: Drag-and-Drop File SVG</h4>
+            <p>Klik tombol <strong>"💾 Unduh File SVG"</strong> di halaman ini, lalu tarik (*drag-and-drop*) file SVG langsung ke atas kanvas Draw.io atau Canva!</p>
           </div>
         </div>
       </div>
 
       <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-        <button class="btn btn-primary" onclick="closeModal()">Saya Mengerti</button>
+        <button class="btn btn-png" onclick="closeModal()">Tutup Panduan</button>
       </div>
     </div>
   </div>
@@ -526,7 +608,7 @@
         code: `flowchart TD
     subgraph IoT_Hardware["Perangkat IoT Kumbung (Fisik)"]
         ESP32["Microcontroller ESP32"]
-        Sensors["Sensor DHT22 / SHT3x<br/>(Suhu & Kelembaban)"]
+        Sensors["Sensor DHT22 / SHT3x<br/>(Suhu dan Kelembaban)"]
         Actuators["Aktuator Relay:<br/>- Pompa Kabut (Mister)<br/>- Kipas Exhaust (Fan)<br/>- Pompa Lantai"]
         BarcodeLabel["Stiker Barcode / QR Code Fisik"]
         
@@ -535,17 +617,17 @@
         BarcodeLabel -.->|Ditempel pada Casing| ESP32
     end
 
-    subgraph Network_Protocol["Jalur Jaringan & Protokol"]
+    subgraph Network_Protocol["Jalur Jaringan dan Protokol"]
         MQTT_Broker["MQTT Broker<br/>(EMQX / Mosquitto)"]
-        DevTunnel["VS Code Dev Tunnels / HTTPS<br/>(Reverse Proxy & SSL)"]
+        DevTunnel["VS Code Dev Tunnels / HTTPS<br/>(Reverse Proxy dan SSL)"]
     end
 
     subgraph Backend_Server["Backend API (Node.js / Express)"]
-        AuthService["Auth & JWT Service"]
-        DeviceService["Device & Pairing Manager"]
+        AuthService["Auth dan JWT Service"]
+        DeviceService["Device dan Pairing Manager"]
         TelemetryService["Telemetry Ingestion Worker"]
         ControlService["Device Control Engine"]
-        CycleService["Siklus & Panen Service"]
+        CycleService["Siklus dan Panen Service"]
         Database[("Database MariaDB / MySQL")]
 
         AuthService --- Database
@@ -558,7 +640,7 @@
     subgraph Client_Apps["Antarmuka Pengguna (ShroomSync Frontend)"]
         MobileAPK["Aplikasi Android Native (APK)<br/>Capacitor 8 + React"]
         WebApp["Web Dashboard (Browser)<br/>Vite + React"]
-        CameraScanner["Kamera HP / Scanner Barcode<br/>(html5-qrcode)"]
+        CameraScanner["Kamera HP / Scanner Barcode<br/>(Library html5-qrcode)"]
     end
 
     ESP32 -->|"Publish Telemetri<br/>(kumbung/{id}/telemetry)"| MQTT_Broker
@@ -566,9 +648,9 @@
     ControlService -->|"Publish Perintah Kontrol<br/>(kumbung/{id}/command)"| MQTT_Broker
     MQTT_Broker -->|"Kirim Perintah ke ESP32"| ESP32
 
-    MobileAPK <-->|"REST API Request via HTTPS"| DevTunnel
-    WebApp <-->|"REST API Request via HTTP/HTTPS"| DevTunnel
-    DevTunnel <--> Backend_Server
+    MobileAPK -->|"REST API Request via HTTPS"| DevTunnel
+    WebApp -->|"REST API Request via HTTP/HTTPS"| DevTunnel
+    DevTunnel --> Backend_Server
 
     CameraScanner -->|"Pindai Stiker Barcode/QR"| BarcodeLabel
     CameraScanner -->|"Isi Otomatis Device ID"| MobileAPK`
@@ -580,23 +662,23 @@
         code: `flowchart TD
     Start([Pengguna Buka Aplikasi]) --> CheckToken{Cek Token JWT di LocalStorage?}
     
-    CheckToken -- Ada & Masih Valid --> ValidateProfile{Profil Sudah Lengkap?}
+    CheckToken -- Ada dan Masih Valid --> ValidateProfile{Profil Sudah Lengkap?}
     CheckToken -- Tidak Ada / Kedaluwarsa --> ShowLogin[Tampilkan Layar Login]
     
-    ShowLogin --> SubmitLogin[Input Email/Username & Password]
+    ShowLogin --> SubmitLogin[Input Email/Username dan Password]
     SubmitLogin --> APILogin[Kirim POST /auth/login]
     
     APILogin --> CheckLoginSuccess{Kredensial Valid?}
     CheckLoginSuccess -- Salah --> LoginError[Tampilkan Pesan Error / Kredensial Salah]
     LoginError --> ShowLogin
     
-    CheckLoginSuccess -- Benar --> SaveToken[Simpan Token JWT & Data User]
+    CheckLoginSuccess -- Benar --> SaveToken[Simpan Token JWT dan Data User]
     SaveToken --> CheckOnboarding{mustSetupProfile == true?}
     
     CheckOnboarding -- Ya (Akun Baru) --> ShowOnboarding[Tampilkan Layar Penuh Onboarding Petani]
     ValidateProfile -- Belum Lengkap --> ShowOnboarding
     
-    ShowOnboarding --> FillOnboardingForm["Petani Mengisi Data:<br/>1. Kata Sandi Lama & Sandi Baru<br/>2. Nama Lengkap Petani<br/>3. Nomor WhatsApp<br/>4. Nama Usaha Kumbung<br/>5. Alamat Lengkap"]
+    ShowOnboarding --> FillOnboardingForm["Petani Mengisi Data:<br/>1. Kata Sandi Lama dan Sandi Baru<br/>2. Nama Lengkap Petani<br/>3. Nomor WhatsApp<br/>4. Nama Usaha Kumbung<br/>5. Alamat Lengkap"]
     
     FillOnboardingForm --> SubmitOnboarding[Kirim POST /auth/complete-onboarding]
     SubmitOnboarding --> CheckOnboardSuccess{Validasi Berhasil?}
@@ -610,7 +692,7 @@
     CheckOnboarding -- Tidak (Akun Lama) --> GoDashboard
     ValidateProfile -- Sudah Lengkap --> GoDashboard
     
-    GoDashboard --> EndDashboard([Mulai Monitoring & Kelola Kumbung])`
+    GoDashboard --> EndDashboard([Mulai Monitoring dan Kelola Kumbung])`
       },
       {
         id: 'device_activation',
@@ -624,7 +706,7 @@
     
     OpenModal --> OptionInsideForm{Mau Scan dari Form?}
     OptionInsideForm -- Ya --> OpenScanner
-    OptionInsideForm -- Tidak (Ketik Manual) --> ManualInput[Input Nama & Device ID Manual]
+    OptionInsideForm -- Tidak (Ketik Manual) --> ManualInput[Input Nama dan Device ID Manual]
     
     OpenScanner --> CheckCamPerm{Izin Kamera Diberikan?}
     CheckCamPerm -- Belum / Ditolak --> RequestPerm[Minta Izin Kamera Android OS]
@@ -642,14 +724,14 @@
     DetectCode -- Berhasil Terbaca --> HapticFeedback[Pemicu Haptic Vibration HP]
     ProcessImage --> HapticFeedback
     
-    HapticFeedback --> SmartParser["Smart Parser (parseScannedDevice):<br/>- Format JSON: ambil deviceId & name<br/>- Format URL: ekstrak query params<br/>- Format Prefix ID:SS-xxx: bersihkan prefix<br/>- Format Raw: ambil string Device ID"]
+    HapticFeedback --> SmartParser["Smart Parser parseScannedDevice:<br/>- Format JSON: ambil deviceId dan name<br/>- Format URL: ekstrak query params<br/>- Format Prefix ID:SS-xxx: bersihkan prefix<br/>- Format Raw: ambil string Device ID"]
     
-    SmartParser --> AutoFill[Isi Otomatis Field Device ID & Nama di Form]
+    SmartParser --> AutoFill[Isi Otomatis Field Device ID dan Nama di Form]
     CloseScanner[Tutup Scanner Modal] --> AutoFill
     ManualInput --> ReadySubmit[Form Lengkap]
     AutoFill --> ReadySubmit
     
-    ReadySubmit --> SubmitDevice[Klik 'Simpan & Aktivasi']
+    ReadySubmit --> SubmitDevice[Klik 'Simpan dan Aktivasi']
     SubmitDevice --> SendActivate[Kirim POST /devices/activate]
     
     SendActivate --> CheckActivateStatus{Aktivasi Berhasil?}
@@ -665,13 +747,13 @@
         title: '4. Telemetri Sensor & Monitoring Real-Time',
         desc: 'Pipeline data pembacaan sensor suhu & kelembaban dari modul ESP32, penyimpanan database, hingga render grafik Recharts',
         code: `flowchart TD
-    StartSensor([Siklus Pembacaan Sensor ESP32]) --> ReadHardware[Baca Sensor Suhu & Kelembaban]
+    StartSensor([Siklus Pembacaan Sensor ESP32]) --> ReadHardware[Baca Sensor Suhu dan Kelembaban]
     
     ReadHardware --> CheckSensorValid{Sensor Merespons Normal?}
     CheckSensorValid -- Error / NaN --> RetryRead[Coba Baca Ulang Sensor dalam 2 Detik]
     RetryRead --> ReadHardware
     
-    CheckSensorValid -- Valid --> BuildPayload["Format JSON Telemetri:<br/>- deviceId<br/>- temperature (°C)<br/>- humidity (%RH)<br/>- uptimeMs<br/>- rssiDbm"]
+    CheckSensorValid -- Valid --> BuildPayload["Format JSON Telemetri:<br/>- deviceId<br/>- temperature Celcius<br/>- humidity RH<br/>- uptimeMs<br/>- rssiDbm"]
     
     BuildPayload --> CheckWifi{Koneksi WiFi ESP32?}
     CheckWifi -- Terputus --> ReconnectWifi[Coba Sambung Ulang ke Router]
@@ -682,15 +764,15 @@
     MqttPublish --> BackendSubscriber[Backend ShroomSync Menerima Pesan MQTT]
     BackendSubscriber --> ValidateDevice{Perangkat Terdaftar di DB?}
     
-    ValidateDevice -- Tidak Terdaftar --> DiscardLog[Catat Log Unknown Device & Abaikan]
+    ValidateDevice -- Tidak Terdaftar --> DiscardLog[Catat Log Unknown Device dan Abaikan]
     ValidateDevice -- Terdaftar --> SaveTelemetry[Simpan Rekaman ke Tabel Telemetry DB]
     
-    SaveTelemetry --> UpdateLastSeen[Perbarui Kolom lastSeenAt & Status Online]
+    SaveTelemetry --> UpdateLastSeen[Perbarui Kolom lastSeenAt dan Status Online]
     
     subgraph Frontend_App["Aplikasi Web / Android Mobile"]
-        PollEngine["Interval Polling / Real-Time Sync<br/>(Setiap 2-5 Detik)"]
-        PollEngine --> FetchLatest[Panggil GET /telemetry/latest & /history]
-        FetchLatest --> UpdateUI["Perbarui Komponen UI:<br/>1. Kartu Suhu & Kelembaban Terkini<br/>2. Status Badge Online/Offline<br/>3. Grafik Historis Recharts (Area/Bar)<br/>4. Indikator Kualitas Lingkungan Tiram"]
+        PollEngine["Interval Polling dan Real-Time Sync<br/>(Setiap 2-5 Detik)"]
+        PollEngine --> FetchLatest[Panggil GET /telemetry/latest dan /history]
+        FetchLatest --> UpdateUI["Perbarui Komponen UI:<br/>1. Kartu Suhu dan Kelembaban Terkini<br/>2. Status Badge Online/Offline<br/>3. Grafik Historis Recharts (Area/Bar)<br/>4. Indikator Kualitas Lingkungan Tiram"]
     end
     
     UpdateLastSeen -.-> FetchLatest`
@@ -710,7 +792,7 @@
     TriggerRelayManual --> AckManual[ESP32 Kirim Status Terkini ke Server]
     
     CheckMode -- Mode 2: Otomatis (Threshold) --> CheckCurrentSensor[Ambil Data Sensor Terkini]
-    CheckCurrentSensor --> EvalTempHumidity{"Evaluasi Parameter:<br/>1. Kelembaban < Min Kelembaban?<br/>2. Suhu > Max Suhu?"}
+    CheckCurrentSensor --> EvalTempHumidity{"Evaluasi Parameter:<br/>1. Kelembaban di Bawah Batas Min?<br/>2. Suhu di Atas Batas Max?"}
     
     EvalTempHumidity -- Kelembaban Terlalu Rendah --> ActionMistAuto[Nyalakan Pompa Kabut / Mister]
     EvalTempHumidity -- Suhu Terlalu Panas --> ActionFanAuto[Nyalakan Kipas Exhaust Fan]
@@ -726,7 +808,7 @@
     MatchSchedule -- Tidak Cocok --> StandbySchedule[Standby Menunggu Waktu Jadwal]
     MatchSchedule -- Waktu Cocok --> TriggerScheduleMist[Nyalakan Pompa Penyemprotan Sesuai Durasi]
     TriggerScheduleMist --> WaitScheduleDuration[Hitung Mundur Durasi Timer Semprot]
-    WaitScheduleDuration --> StopScheduleMist[Matikan Pompa Kabut & Reset Trigger Hari Ini]
+    WaitScheduleDuration --> StopScheduleMist[Matikan Pompa Kabut dan Reset Trigger Hari Ini]
     
     AckManual --> UpdateControlUI[Perbarui Indikator Aktuator di Halaman Kontrol Aplikasi]
     TurnOffAuto --> UpdateControlUI
@@ -737,17 +819,17 @@
         title: '6. Siklus Budidaya Jamur & Pencatatan Panen',
         desc: 'Manajemen siklus panen: registrasi batch baglog, tracking fase inkubasi/pinhead, log panen bertahap (flushes), dan kalkulasi rasio panen',
         code: `flowchart TD
-    StartCycle([Petani Membuka Menu Siklus & Panen]) --> HasActiveCycle{Ada Siklus Aktif?}
+    StartCycle([Petani Membuka Menu Siklus dan Panen]) --> HasActiveCycle{Ada Siklus Aktif?}
     
     HasActiveCycle -- Tidak Ada --> FormNewCycle[Klik 'Mulai Siklus Baru']
     FormNewCycle --> InputCycleData["Isi Informasi Budidaya:<br/>- Nama Siklus (Batch)<br/>- Jenis Jamur (Tiram Putih/Coklat)<br/>- Jumlah Baglog (Misal: 1500 Baglog)<br/>- Tanggal Mulai Tanam<br/>- Target Estimasi Hasil (Kg)"]
     InputCycleData --> SaveNewCycle[Kirim POST /cycles]
     SaveNewCycle --> ActiveCycleCreated[Siklus Aktif Terdaftar]
     
-    HasActiveCycle -- Ada Siklus Aktif --> ViewCycleDetails[Tampilkan Progres Hari & Fase Tanam]
+    HasActiveCycle -- Ada Siklus Aktif --> ViewCycleDetails[Tampilkan Progres Hari dan Fase Tanam]
     ActiveCycleCreated --> ViewCycleDetails
     
-    ViewCycleDetails --> DailyMonitoring[Pemantauan Harian Suhu & Kelembaban Kumbung]
+    ViewCycleDetails --> DailyMonitoring[Pemantauan Harian Suhu dan Kelembaban Kumbung]
     DailyMonitoring --> PhaseTransition{"Fase Tanam Berjalan:"}
     
     PhaseTransition --> Phase1["Fase 1: Inkubasi Miselium (Hari 1-30)"]
@@ -758,36 +840,43 @@
     HarvestTime -- Belum --> DailyMonitoring
     
     HarvestTime -- Siap Panen --> ClickAddHarvest[Klik 'Catat Hasil Panen']
-    ClickAddHarvest --> InputHarvestForm["Input Data Panen:<br/>- Tanggal & Waktu Petik<br/>- Bobot Panen (Kg)<br/>- Kualitas / Grade (A / B / C)<br/>- Catatan Kondisi Tubuh Buah"]
+    ClickAddHarvest --> InputHarvestForm["Input Data Panen:<br/>- Tanggal dan Waktu Petik<br/>- Bobot Panen (Kg)<br/>- Kualitas / Grade (A / B / C)<br/>- Catatan Kondisi Tubuh Buah"]
     
     InputHarvestForm --> SaveHarvest[Kirim POST /cycles/{id}/harvests]
-    SaveHarvest --> UpdateCycleStats["Sistem Menghitung Otomatis:<br/>1. Total Akumulasi Panen (Kg)<br/>2. Persentase Biological Efficiency Ratio (BER)<br/>3. Estimasi Pendapatan Penjualan"]
+    SaveHarvest --> UpdateCycleStats["Sistem Menghitung Otomatis:<br/>1. Total Akumulasi Panen (Kg)<br/>2. Rasio Efisiensi Panen (BER)<br/>3. Estimasi Pendapatan Penjualan"]
     
     UpdateCycleStats --> MoreHarvests{Baglog Masih Produktif (Flushes Berikutnya)?}
     MoreHarvests -- Masih Produktif (Flash 2, 3, 4) --> DailyMonitoring
     MoreHarvests -- Baglog Afkir / Habis Nutrisi --> CloseCycle[Klik 'Selesaikan Siklus Budidaya']
     
     CloseCycle --> GenerateReport[Sistem Menghasilkan Laporan Evaluasi Siklus]
-    GenerateReport --> EndCycleArchive([Siklus Diarsipkan & Siap untuk Siklus Baru])`
+    GenerateReport --> EndCycleArchive([Siklus Diarsipkan dan Siap untuk Siklus Baru])`
       }
     ];
 
     let currentIndex = 0;
+    let currentZoom = 1;
 
     mermaid.initialize({
       startOnLoad: false,
+      securityLevel: 'loose',
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: true,
+        curve: 'basis'
+      },
       theme: 'dark',
       themeVariables: {
         darkMode: true,
-        background: '#18221c',
-        primaryColor: '#5a9e6f',
+        background: '#151e18',
+        primaryColor: '#2b543b',
         primaryTextColor: '#ffffff',
-        primaryBorderColor: '#7ec293',
+        primaryBorderColor: '#4a9363',
         lineColor: '#5a9e6f',
-        secondaryColor: '#1f2d25',
-        tertiaryColor: '#121a15',
+        secondaryColor: '#1e3828',
+        tertiaryColor: '#121f16',
       },
-      fontFamily: 'Plus Jakarta Sans',
+      fontFamily: 'Plus Jakarta Sans, sans-serif',
     });
 
     function initMenu() {
@@ -795,46 +884,85 @@
       list.innerHTML = DIAGRAMS.map((item, index) => `
         <li class="nav-item ${index === 0 ? 'active' : ''}" onclick="selectDiagram(${index})">
           <div class="nav-item-title">
-            <span>${item.title.split('.')[0]}.</span>
-            <span>${item.title.split('. ')[1]}</span>
+            <span class="nav-item-badge">#${index + 1}</span>
+            <span>${item.title.replace(/^\d+\.\s*/, '')}</span>
           </div>
-          <div class="nav-item-desc">${item.desc.substring(0, 50)}...</div>
+          <div class="nav-item-desc">${item.desc.substring(0, 52)}...</div>
         </li>
       `).join('');
     }
 
     async function selectDiagram(index) {
       currentIndex = index;
+      currentZoom = 1;
+      applyZoom();
+
       const navItems = document.querySelectorAll('.nav-item');
       navItems.forEach((el, idx) => {
         el.classList.toggle('active', idx === index);
       });
 
       const diagram = DIAGRAMS[index];
-      document.getElementById('currentTitle').innerText = diagram.title;
-      document.getElementById('currentDesc').innerText = diagram.desc;
-      document.getElementById('codePreview').innerText = diagram.code;
+      document.getElementById('diagramTitle').innerText = diagram.title;
+      document.getElementById('diagramDesc').innerText = diagram.desc;
+      document.getElementById('codePanel').innerText = diagram.code;
 
-      const container = document.getElementById('mermaidOutput');
-      container.removeAttribute('data-processed');
-      container.innerHTML = diagram.code;
+      const target = document.getElementById('renderTarget');
+      target.innerHTML = `
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <span>Sedang merender diagram #${index + 1}...</span>
+        </div>
+      `;
 
       try {
-        await mermaid.run({
-          nodes: [container]
-        });
+        const renderId = 'diagram_svg_' + index + '_' + Date.now();
+        const { svg } = await mermaid.render(renderId, diagram.code);
+        target.innerHTML = svg;
       } catch (err) {
-        console.error('Mermaid rendering error:', err);
+        console.error('Error rendering diagram:', err);
+        target.innerHTML = `
+          <div style="padding: 40px; text-align: center; color: #f87171;">
+            <h4>⚠️ Gagal Merender Diagram</h4>
+            <p style="font-size: 0.85rem; margin-top: 8px;">${err.message || String(err)}</p>
+          </div>
+        `;
+      }
+    }
+
+    function zoomIn() {
+      if (currentZoom < 2.0) {
+        currentZoom += 0.15;
+        applyZoom();
+      }
+    }
+
+    function zoomOut() {
+      if (currentZoom > 0.5) {
+        currentZoom -= 0.15;
+        applyZoom();
+      }
+    }
+
+    function zoomReset() {
+      currentZoom = 1;
+      applyZoom();
+    }
+
+    function applyZoom() {
+      const card = document.getElementById('diagramCard');
+      if (card) {
+        card.style.transform = `scale(${currentZoom})`;
       }
     }
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
-      document.getElementById('toastMsg').innerText = msg;
+      document.getElementById('toastText').innerText = msg;
       toast.classList.add('show');
       setTimeout(() => {
         toast.classList.remove('show');
-      }, 2500);
+      }, 3000);
     }
 
     function copyForDrawIo() {
@@ -842,63 +970,112 @@
       navigator.clipboard.writeText(code).then(() => {
         showToast('✓ Kode Mermaid disalin! Buka Draw.io -> Arrange -> Insert -> Advanced -> Mermaid');
       }).catch(() => {
-        showToast('Gagal menyalin otomatis. Silakan salin teks dari panel bawah.');
+        showToast('Gagal otomatis menyalin. Silakan copy teks dari kotak di bagian bawah.');
       });
     }
 
-    function exportAsSvg() {
-      const svg = document.querySelector('#mermaidOutput svg');
-      if (!svg) return;
-      const svgData = new XMLSerializer().serializeToString(svg);
-      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const downloadLink = document.createElement('a');
-      downloadLink.href = url;
-      downloadLink.download = `shroomsync-${DIAGRAMS[currentIndex].id}.svg`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      showToast('✓ Berkas SVG berhasil diunduh');
+    function getCleanSvg() {
+      const svg = document.querySelector('#renderTarget svg');
+      if (!svg) return null;
+
+      const clone = svg.cloneNode(true);
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+      const rect = svg.getBoundingClientRect();
+      const width = Math.max(Math.ceil(rect.width) + 40, 800);
+      const height = Math.max(Math.ceil(rect.height) + 40, 600);
+
+      clone.setAttribute('width', width);
+      clone.setAttribute('height', height);
+      if (!clone.getAttribute('viewBox')) {
+        clone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      }
+
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(clone);
+
+      if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+
+      return { source, width, height };
     }
 
-    function exportAsPng() {
-      const svg = document.querySelector('#mermaidOutput svg');
-      if (!svg) return;
-      const svgData = new XMLSerializer().serializeToString(svg);
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const URL_API = window.URL || window.webkitURL || window;
-      const blobURL = URL_API.createObjectURL(svgBlob);
-      const image = new Image();
-      
-      image.onload = () => {
-        const scale = 2; // High Resolution 2x
-        const canvas = document.createElement('canvas');
-        canvas.width = (svg.clientWidth || 1000) * scale;
-        canvas.height = (svg.clientHeight || 800) * scale;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#0f1512';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-        
-        const pngUrl = canvas.toDataURL('image/png');
-        const downloadLink = document.createElement('a');
-        downloadLink.href = pngUrl;
-        downloadLink.download = `shroomsync-${DIAGRAMS[currentIndex].id}.png`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-        showToast('✓ Gambar PNG Resolusi Tinggi (2x) berhasil diunduh');
+    function downloadSvg() {
+      const clean = getCleanSvg();
+      if (!clean) {
+        showToast('Diagram belum selesai dimuat, silakan tunggu sejenak.');
+        return;
+      }
+
+      const svgBlob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + clean.source], {
+        type: 'image/svg+xml;charset=utf-8'
+      });
+
+      const url = URL.createObjectURL(svgBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `shroomsync-${DIAGRAMS[currentIndex].id}.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('✓ Berkas SVG berhasil diunduh (Siap drag ke Draw.io/Canva)');
+    }
+
+    function downloadPng() {
+      const clean = getCleanSvg();
+      if (!clean) {
+        showToast('Diagram belum selesai dimuat, silakan tunggu sejenak.');
+        return;
+      }
+
+      showToast('Menyiapkan gambar PNG...');
+      const canvas = document.createElement('canvas');
+      const scale = 2;
+      canvas.width = clean.width * scale;
+      canvas.height = clean.height * scale;
+
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0c120e';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const img = new Image();
+      const svgBase64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(clean.source)));
+
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        try {
+          const pngUrl = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.href = pngUrl;
+          a.download = `shroomsync-${DIAGRAMS[currentIndex].id}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showToast('✓ Gambar PNG Resolusi Tinggi (2x) berhasil diunduh!');
+        } catch (err) {
+          console.warn('Canvas export failed, falling back to SVG:', err);
+          downloadSvg();
+        }
       };
-      image.src = blobURL;
+
+      img.onerror = () => {
+        console.warn('Fallback ke download SVG');
+        downloadSvg();
+      };
+
+      img.src = svgBase64;
     }
 
     function openModal() {
-      document.getElementById('modalOverlay').classList.add('open');
+      document.getElementById('modalBackdrop').classList.add('active');
     }
 
     function closeModal(e) {
-      if (!e || e.target === document.getElementById('modalOverlay') || e.target.tagName === 'BUTTON') {
-        document.getElementById('modalOverlay').classList.remove('open');
+      if (!e || e.target === document.getElementById('modalBackdrop') || e.target.tagName === 'BUTTON') {
+        document.getElementById('modalBackdrop').classList.remove('active');
       }
     }
 

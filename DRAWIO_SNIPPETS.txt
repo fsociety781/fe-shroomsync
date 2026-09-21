@@ -1,16 +1,17 @@
 ================================================================================
 KUMPULAN KODE FLOWCHART SHROOMSYNC UNTUK DRAW.IO / MIRO / WHIMSICAL
+(Versi Teruji & Bersih: Bebas Karakter Eror Parser)
 ================================================================================
 
 CARA IMPORT KE DRAW.IO (https://app.diagrams.net):
-1. Buka https://app.diagrams.net (atau Draw.io Desktop).
+1. Buka https://app.diagrams.net (atau aplikasi Draw.io Desktop).
 2. Buat diagram baru (Blank Diagram).
-3. Di menu atas, klik:
+3. Di menu atas Draw.io, klik:
    Arrange (Atur) -> Insert (Sisipkan) -> Advanced (Tingkat Lanjut) -> Mermaid.
 4. Copy salah satu blok kode di bawah ini (pilih diagram 1 sampai 6).
-5. Paste ke kolom dialog Draw.io, lalu klik tombol "Insert".
-6. Selesai! Diagram langsung terbentuk menjadi shape & panah yang bisa diedit.
-   Untuk membuat tab halaman berikutnya, klik tanda "+" di bagian bawah Draw.io.
+5. Paste ke kotak teks Draw.io, lalu klik tombol "Insert".
+6. Selesai! Seluruh diagram otomatis terkonversi menjadi elemen kotak & panah
+   Draw.io yang bisa digeser, diubah warnanya, serta disunting teksnya.
 
 ================================================================================
 DIAGRAM 1: ARSITEKTUR SISTEM KESELURUHAN (END-TO-END)
@@ -19,7 +20,7 @@ DIAGRAM 1: ARSITEKTUR SISTEM KESELURUHAN (END-TO-END)
 flowchart TD
     subgraph IoT_Hardware["Perangkat IoT Kumbung (Fisik)"]
         ESP32["Microcontroller ESP32"]
-        Sensors["Sensor DHT22 / SHT3x<br/>(Suhu & Kelembaban)"]
+        Sensors["Sensor DHT22 / SHT3x<br/>(Suhu dan Kelembaban)"]
         Actuators["Aktuator Relay:<br/>- Pompa Kabut (Mister)<br/>- Kipas Exhaust (Fan)<br/>- Pompa Lantai"]
         BarcodeLabel["Stiker Barcode / QR Code Fisik"]
         
@@ -28,17 +29,17 @@ flowchart TD
         BarcodeLabel -.->|Ditempel pada Casing| ESP32
     end
 
-    subgraph Network_Protocol["Jalur Jaringan & Protokol"]
+    subgraph Network_Protocol["Jalur Jaringan dan Protokol"]
         MQTT_Broker["MQTT Broker<br/>(EMQX / Mosquitto)"]
-        DevTunnel["VS Code Dev Tunnels / HTTPS<br/>(Reverse Proxy & SSL)"]
+        DevTunnel["VS Code Dev Tunnels / HTTPS<br/>(Reverse Proxy dan SSL)"]
     end
 
     subgraph Backend_Server["Backend API (Node.js / Express)"]
-        AuthService["Auth & JWT Service"]
-        DeviceService["Device & Pairing Manager"]
+        AuthService["Auth dan JWT Service"]
+        DeviceService["Device dan Pairing Manager"]
         TelemetryService["Telemetry Ingestion Worker"]
         ControlService["Device Control Engine"]
-        CycleService["Siklus & Panen Service"]
+        CycleService["Siklus dan Panen Service"]
         Database[("Database MariaDB / MySQL")]
 
         AuthService --- Database
@@ -51,7 +52,7 @@ flowchart TD
     subgraph Client_Apps["Antarmuka Pengguna (ShroomSync Frontend)"]
         MobileAPK["Aplikasi Android Native (APK)<br/>Capacitor 8 + React"]
         WebApp["Web Dashboard (Browser)<br/>Vite + React"]
-        CameraScanner["Kamera HP / Scanner Barcode<br/>(html5-qrcode)"]
+        CameraScanner["Kamera HP / Scanner Barcode<br/>(Library html5-qrcode)"]
     end
 
     ESP32 -->|"Publish Telemetri<br/>(kumbung/{id}/telemetry)"| MQTT_Broker
@@ -59,9 +60,9 @@ flowchart TD
     ControlService -->|"Publish Perintah Kontrol<br/>(kumbung/{id}/command)"| MQTT_Broker
     MQTT_Broker -->|"Kirim Perintah ke ESP32"| ESP32
 
-    MobileAPK <-->|"REST API Request via HTTPS"| DevTunnel
-    WebApp <-->|"REST API Request via HTTP/HTTPS"| DevTunnel
-    DevTunnel <--> Backend_Server
+    MobileAPK -->|"REST API Request via HTTPS"| DevTunnel
+    WebApp -->|"REST API Request via HTTP/HTTPS"| DevTunnel
+    DevTunnel --> Backend_Server
 
     CameraScanner -->|"Pindai Stiker Barcode/QR"| BarcodeLabel
     CameraScanner -->|"Isi Otomatis Device ID"| MobileAPK
@@ -74,23 +75,23 @@ DIAGRAM 2: AUTENTIKASI & ONBOARDING PETANI BARU
 flowchart TD
     Start([Pengguna Buka Aplikasi]) --> CheckToken{Cek Token JWT di LocalStorage?}
     
-    CheckToken -- Ada & Masih Valid --> ValidateProfile{Profil Sudah Lengkap?}
+    CheckToken -- Ada dan Masih Valid --> ValidateProfile{Profil Sudah Lengkap?}
     CheckToken -- Tidak Ada / Kedaluwarsa --> ShowLogin[Tampilkan Layar Login]
     
-    ShowLogin --> SubmitLogin[Input Email/Username & Password]
+    ShowLogin --> SubmitLogin[Input Email/Username dan Password]
     SubmitLogin --> APILogin[Kirim POST /auth/login]
     
     APILogin --> CheckLoginSuccess{Kredensial Valid?}
     CheckLoginSuccess -- Salah --> LoginError[Tampilkan Pesan Error / Kredensial Salah]
     LoginError --> ShowLogin
     
-    CheckLoginSuccess -- Benar --> SaveToken[Simpan Token JWT & Data User]
+    CheckLoginSuccess -- Benar --> SaveToken[Simpan Token JWT dan Data User]
     SaveToken --> CheckOnboarding{mustSetupProfile == true?}
     
     CheckOnboarding -- Ya (Akun Baru) --> ShowOnboarding[Tampilkan Layar Penuh Onboarding Petani]
     ValidateProfile -- Belum Lengkap --> ShowOnboarding
     
-    ShowOnboarding --> FillOnboardingForm["Petani Mengisi Data:<br/>1. Kata Sandi Lama & Sandi Baru<br/>2. Nama Lengkap Petani<br/>3. Nomor WhatsApp<br/>4. Nama Usaha Kumbung<br/>5. Alamat Lengkap"]
+    ShowOnboarding --> FillOnboardingForm["Petani Mengisi Data:<br/>1. Kata Sandi Lama dan Sandi Baru<br/>2. Nama Lengkap Petani<br/>3. Nomor WhatsApp<br/>4. Nama Usaha Kumbung<br/>5. Alamat Lengkap"]
     
     FillOnboardingForm --> SubmitOnboarding[Kirim POST /auth/complete-onboarding]
     SubmitOnboarding --> CheckOnboardSuccess{Validasi Berhasil?}
@@ -104,7 +105,7 @@ flowchart TD
     CheckOnboarding -- Tidak (Akun Lama) --> GoDashboard
     ValidateProfile -- Sudah Lengkap --> GoDashboard
     
-    GoDashboard --> EndDashboard([Mulai Monitoring & Kelola Kumbung])
+    GoDashboard --> EndDashboard([Mulai Monitoring dan Kelola Kumbung])
 
 
 ================================================================================
@@ -119,7 +120,7 @@ flowchart TD
     
     OpenModal --> OptionInsideForm{Mau Scan dari Form?}
     OptionInsideForm -- Ya --> OpenScanner
-    OptionInsideForm -- Tidak (Ketik Manual) --> ManualInput[Input Nama & Device ID Manual]
+    OptionInsideForm -- Tidak (Ketik Manual) --> ManualInput[Input Nama dan Device ID Manual]
     
     OpenScanner --> CheckCamPerm{Izin Kamera Diberikan?}
     CheckCamPerm -- Belum / Ditolak --> RequestPerm[Minta Izin Kamera Android OS]
@@ -137,14 +138,14 @@ flowchart TD
     DetectCode -- Berhasil Terbaca --> HapticFeedback[Pemicu Haptic Vibration HP]
     ProcessImage --> HapticFeedback
     
-    HapticFeedback --> SmartParser["Smart Parser (parseScannedDevice):<br/>- Format JSON: ambil deviceId & name<br/>- Format URL: ekstrak query params<br/>- Format Prefix ID:SS-xxx: bersihkan prefix<br/>- Format Raw: ambil string Device ID"]
+    HapticFeedback --> SmartParser["Smart Parser parseScannedDevice:<br/>- Format JSON: ambil deviceId dan name<br/>- Format URL: ekstrak query params<br/>- Format Prefix ID:SS-xxx: bersihkan prefix<br/>- Format Raw: ambil string Device ID"]
     
-    SmartParser --> AutoFill[Isi Otomatis Field Device ID & Nama di Form]
+    SmartParser --> AutoFill[Isi Otomatis Field Device ID dan Nama di Form]
     CloseScanner[Tutup Scanner Modal] --> AutoFill
     ManualInput --> ReadySubmit[Form Lengkap]
     AutoFill --> ReadySubmit
     
-    ReadySubmit --> SubmitDevice[Klik 'Simpan & Aktivasi']
+    ReadySubmit --> SubmitDevice[Klik 'Simpan dan Aktivasi']
     SubmitDevice --> SendActivate[Kirim POST /devices/activate]
     
     SendActivate --> CheckActivateStatus{Aktivasi Berhasil?}
@@ -161,13 +162,13 @@ DIAGRAM 4: TELEMETRI SENSOR & MONITORING REAL-TIME
 ================================================================================
 
 flowchart TD
-    StartSensor([Siklus Pembacaan Sensor ESP32]) --> ReadHardware[Baca Sensor Suhu & Kelembaban]
+    StartSensor([Siklus Pembacaan Sensor ESP32]) --> ReadHardware[Baca Sensor Suhu dan Kelembaban]
     
     ReadHardware --> CheckSensorValid{Sensor Merespons Normal?}
     CheckSensorValid -- Error / NaN --> RetryRead[Coba Baca Ulang Sensor dalam 2 Detik]
     RetryRead --> ReadHardware
     
-    CheckSensorValid -- Valid --> BuildPayload["Format JSON Telemetri:<br/>- deviceId<br/>- temperature (°C)<br/>- humidity (%RH)<br/>- uptimeMs<br/>- rssiDbm"]
+    CheckSensorValid -- Valid --> BuildPayload["Format JSON Telemetri:<br/>- deviceId<br/>- temperature Celcius<br/>- humidity RH<br/>- uptimeMs<br/>- rssiDbm"]
     
     BuildPayload --> CheckWifi{Koneksi WiFi ESP32?}
     CheckWifi -- Terputus --> ReconnectWifi[Coba Sambung Ulang ke Router]
@@ -178,15 +179,15 @@ flowchart TD
     MqttPublish --> BackendSubscriber[Backend ShroomSync Menerima Pesan MQTT]
     BackendSubscriber --> ValidateDevice{Perangkat Terdaftar di DB?}
     
-    ValidateDevice -- Tidak Terdaftar --> DiscardLog[Catat Log Unknown Device & Abaikan]
+    ValidateDevice -- Tidak Terdaftar --> DiscardLog[Catat Log Unknown Device dan Abaikan]
     ValidateDevice -- Terdaftar --> SaveTelemetry[Simpan Rekaman ke Tabel Telemetry DB]
     
-    SaveTelemetry --> UpdateLastSeen[Perbarui Kolom lastSeenAt & Status Online]
+    SaveTelemetry --> UpdateLastSeen[Perbarui Kolom lastSeenAt dan Status Online]
     
     subgraph Frontend_App["Aplikasi Web / Android Mobile"]
-        PollEngine["Interval Polling / Real-Time Sync<br/>(Setiap 2-5 Detik)"]
-        PollEngine --> FetchLatest[Panggil GET /telemetry/latest & /history]
-        FetchLatest --> UpdateUI["Perbarui Komponen UI:<br/>1. Kartu Suhu & Kelembaban Terkini<br/>2. Status Badge Online/Offline<br/>3. Grafik Historis Recharts (Area/Bar)<br/>4. Indikator Kualitas Lingkungan Tiram"]
+        PollEngine["Interval Polling dan Real-Time Sync<br/>(Setiap 2-5 Detik)"]
+        PollEngine --> FetchLatest[Panggil GET /telemetry/latest dan /history]
+        FetchLatest --> UpdateUI["Perbarui Komponen UI:<br/>1. Kartu Suhu dan Kelembaban Terkini<br/>2. Status Badge Online/Offline<br/>3. Grafik Historis Recharts (Area/Bar)<br/>4. Indikator Kualitas Lingkungan Tiram"]
     end
     
     UpdateLastSeen -.-> FetchLatest
@@ -209,7 +210,7 @@ flowchart TD
     
     %% Mode 2: Otomatis
     CheckMode -- Mode 2: Otomatis (Threshold) --> CheckCurrentSensor[Ambil Data Sensor Terkini]
-    CheckCurrentSensor --> EvalTempHumidity{"Evaluasi Parameter:<br/>1. Kelembaban < Min Kelembaban?<br/>2. Suhu > Max Suhu?"}
+    CheckCurrentSensor --> EvalTempHumidity{"Evaluasi Parameter:<br/>1. Kelembaban di Bawah Batas Min?<br/>2. Suhu di Atas Batas Max?"}
     
     EvalTempHumidity -- Kelembaban Terlalu Rendah --> ActionMistAuto[Nyalakan Pompa Kabut / Mister]
     EvalTempHumidity -- Suhu Terlalu Panas --> ActionFanAuto[Nyalakan Kipas Exhaust Fan]
@@ -226,7 +227,7 @@ flowchart TD
     MatchSchedule -- Tidak Cocok --> StandbySchedule[Standby Menunggu Waktu Jadwal]
     MatchSchedule -- Waktu Cocok --> TriggerScheduleMist[Nyalakan Pompa Penyemprotan Sesuai Durasi]
     TriggerScheduleMist --> WaitScheduleDuration[Hitung Mundur Durasi Timer Semprot]
-    WaitScheduleDuration --> StopScheduleMist[Matikan Pompa Kabut & Reset Trigger Hari Ini]
+    WaitScheduleDuration --> StopScheduleMist[Matikan Pompa Kabut dan Reset Trigger Hari Ini]
     
     AckManual --> UpdateControlUI[Perbarui Indikator Aktuator di Halaman Kontrol Aplikasi]
     TurnOffAuto --> UpdateControlUI
@@ -238,17 +239,17 @@ DIAGRAM 6: SIKLUS BUDIDAYA JAMUR & PENCATATAN PANEN
 ================================================================================
 
 flowchart TD
-    StartCycle([Petani Membuka Menu Siklus & Panen]) --> HasActiveCycle{Ada Siklus Aktif?}
+    StartCycle([Petani Membuka Menu Siklus dan Panen]) --> HasActiveCycle{Ada Siklus Aktif?}
     
     HasActiveCycle -- Tidak Ada --> FormNewCycle[Klik 'Mulai Siklus Baru']
     FormNewCycle --> InputCycleData["Isi Informasi Budidaya:<br/>- Nama Siklus (Batch)<br/>- Jenis Jamur (Tiram Putih/Coklat)<br/>- Jumlah Baglog (Misal: 1500 Baglog)<br/>- Tanggal Mulai Tanam<br/>- Target Estimasi Hasil (Kg)"]
     InputCycleData --> SaveNewCycle[Kirim POST /cycles]
     SaveNewCycle --> ActiveCycleCreated[Siklus Aktif Terdaftar]
     
-    HasActiveCycle -- Ada Siklus Aktif --> ViewCycleDetails[Tampilkan Progres Hari & Fase Tanam]
+    HasActiveCycle -- Ada Siklus Aktif --> ViewCycleDetails[Tampilkan Progres Hari dan Fase Tanam]
     ActiveCycleCreated --> ViewCycleDetails
     
-    ViewCycleDetails --> DailyMonitoring[Pemantauan Harian Suhu & Kelembaban Kumbung]
+    ViewCycleDetails --> DailyMonitoring[Pemantauan Harian Suhu dan Kelembaban Kumbung]
     DailyMonitoring --> PhaseTransition{"Fase Tanam Berjalan:"}
     
     PhaseTransition --> Phase1["Fase 1: Inkubasi Miselium (Hari 1-30)"]
@@ -259,15 +260,14 @@ flowchart TD
     HarvestTime -- Belum --> DailyMonitoring
     
     HarvestTime -- Siap Panen --> ClickAddHarvest[Klik 'Catat Hasil Panen']
-    ClickAddHarvest --> InputHarvestForm["Input Data Panen:<br/>- Tanggal & Waktu Petik<br/>- Bobot Panen (Kg)<br/>- Kualitas / Grade (A / B / C)<br/>- Catatan Kondisi Tubuh Buah"]
+    ClickAddHarvest --> InputHarvestForm["Input Data Panen:<br/>- Tanggal dan Waktu Petik<br/>- Bobot Panen (Kg)<br/>- Kualitas / Grade (A / B / C)<br/>- Catatan Kondisi Tubuh Buah"]
     
     InputHarvestForm --> SaveHarvest[Kirim POST /cycles/{id}/harvests]
-    SaveHarvest --> UpdateCycleStats["Sistem Menghitung Otomatis:<br/>1. Total Akumulasi Panen (Kg)<br/>2. Persentase Biological Efficiency Ratio (BER)<br/>3. Estimasi Pendapatan Penjualan"]
+    SaveHarvest --> UpdateCycleStats["Sistem Menghitung Otomatis:<br/>1. Total Akumulasi Panen (Kg)<br/>2. Rasio Efisiensi Panen (BER)<br/>3. Estimasi Pendapatan Penjualan"]
     
     UpdateCycleStats --> MoreHarvests{Baglog Masih Produktif (Flushes Berikutnya)?}
     MoreHarvests -- Masih Produktif (Flash 2, 3, 4) --> DailyMonitoring
     MoreHarvests -- Baglog Afkir / Habis Nutrisi --> CloseCycle[Klik 'Selesaikan Siklus Budidaya']
     
     CloseCycle --> GenerateReport[Sistem Menghasilkan Laporan Evaluasi Siklus]
-    GenerateReport --> EndCycleArchive([Siklus Diarsipkan & Siap untuk Siklus Baru])
-
+    GenerateReport --> EndCycleArchive([Siklus Diarsipkan dan Siap untuk Siklus Baru])

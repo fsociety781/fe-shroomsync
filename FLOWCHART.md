@@ -220,7 +220,7 @@ flowchart TD
     
     %% Mode 2: Otomatis
     CheckMode -- Mode 2: Otomatis (Threshold) --> CheckCurrentSensor[Ambil Data Sensor Terkini]
-    CheckCurrentSensor --> EvalTempHumidity{"Evaluasi Parameter:<br/>1. Kelembaban < Min Kelembaban?<br/>2. Suhu > Max Suhu?"}
+    CheckCurrentSensor --> EvalTempHumidity{"Evaluasi Parameter:<br/>1. Kelembaban di Bawah Batas Min?<br/>2. Suhu di Atas Batas Max?"}
     
     EvalTempHumidity -- Kelembaban Terlalu Rendah --> ActionMistAuto[Nyalakan Pompa Kabut / Mister]
     EvalTempHumidity -- Suhu Terlalu Panas --> ActionFanAuto[Nyalakan Kipas Exhaust Fan]
@@ -237,7 +237,7 @@ flowchart TD
     MatchSchedule -- Tidak Cocok --> StandbySchedule[Standby Menunggu Waktu Jadwal]
     MatchSchedule -- Waktu Cocok --> TriggerScheduleMist[Nyalakan Pompa Penyemprotan Sesuai Durasi]
     TriggerScheduleMist --> WaitScheduleDuration[Hitung Mundur Durasi Timer Semprot]
-    WaitScheduleDuration --> StopScheduleMist[Matikan Pompa Kabut & Reset Trigger Hari Ini]
+    WaitScheduleDuration --> StopScheduleMist[Matikan Pompa Kabut dan Reset Trigger Hari Ini]
     
     AckManual --> UpdateControlUI[Perbarui Indikator Aktuator di Halaman Kontrol Aplikasi]
     TurnOffAuto --> UpdateControlUI
