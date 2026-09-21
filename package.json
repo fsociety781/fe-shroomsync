@@ -10,6 +10,7 @@
     "sync:android": "cap sync android",
     "build:apk": "npm run build:mobile && cap sync android && set \"JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.11\" && set \"PATH=%JAVA_HOME%\\bin;%PATH%\" && cd android && gradlew.bat --no-daemon assembleDebug",
     "lint": "eslint .",
+    "trello:export:web": "node scripts/export-trello-web-backlog.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
     "framer-motion": "^12.38.0",
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.11.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

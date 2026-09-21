@@ -1,5 +1,6 @@
 import config from '../config';
 import apiClient, { APIClient, APIError } from './api-client';
+import AuthService from './AuthService';
 import DeviceService from './DeviceService';
 import TelemetryService from './TelemetryService';
 import OTAService from './OTAService';
@@ -56,9 +57,22 @@ const api = {
 
   health: () => healthClient.get('/health').then((payload) => unwrap(payload, payload)),
 
+  auth: {
+    login: (credentials) => AuthService.login(credentials),
+    completeOnboarding: (data) => AuthService.completeOnboarding(data),
+    me: () => AuthService.getMe(),
+    registerFarmer: (data) => AuthService.registerFarmer(data),
+    logout: () => AuthService.logout(),
+    getUser: () => AuthService.getUser(),
+    getToken: () => AuthService.getToken(),
+    isAuthenticated: () => AuthService.isAuthenticated(),
+  },
+
   devices: {
     list: (limit = 50, offset = 0) => DeviceService.getAllDevices(limit, offset).then(asArray),
     get: (id) => DeviceService.getDevice(id).then(normalizeDeviceDetail),
+    activate: (data) => DeviceService.activateDevice(data).then((payload) => unwrap(payload)),
+    unpair: (id) => DeviceService.unpairDevice(id).then((payload) => unwrap(payload)),
     create: (data) => DeviceService.createDevice(data).then((payload) => unwrap(payload)),
     delete: (id) => DeviceService.deleteDevice(id).then((payload) => unwrap(payload)),
   },
@@ -73,6 +87,9 @@ const api = {
   cycles: {
     list: (deviceId, params = { status: 'active', limit: 100, offset: 0 }) => (
       CycleService.getCycles(deviceId, params).then(asArray)
+    ),
+    get: (deviceId, cycleId) => (
+      apiClient.get(`/devices/${deviceId}/cycles/${cycleId}`).then((payload) => unwrap(payload))
     ),
     create: (deviceId, data) => CycleService.createCycle(deviceId, data).then((payload) => unwrap(payload)),
     summary: (deviceId, cycleId) => CycleService.getSummary(deviceId, cycleId).then((payload) => unwrap(payload)),

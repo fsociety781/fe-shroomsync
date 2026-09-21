@@ -15,9 +15,19 @@ const API_CONFIG = {
 
 const envName = import.meta.env.VITE_APP_ENV || 'development';
 const envConfig = API_CONFIG[envName] || API_CONFIG.development;
-const resolvedBaseURL = envName === 'development'
+const rawBaseURL = envName === 'development'
   ? envConfig.baseURL
-  : import.meta.env.VITE_API_BASE_URL || envConfig.baseURL;
+  : (import.meta.env.VITE_API_BASE_URL || envConfig.baseURL);
+
+const resolvedBaseURL = (() => {
+  if (!rawBaseURL) return '/api/v1';
+  const clean = rawBaseURL.replace(/\/+$/, '');
+  if (/^https?:\/\//i.test(clean) && !clean.endsWith('/api/v1')) {
+    return `${clean}/api/v1`;
+  }
+  return clean;
+})();
+
 const skipTunnelWarning = import.meta.env.VITE_SKIP_TUNNEL_WARNING === 'true'
   || /devtunnels\.ms/i.test(resolvedBaseURL);
 

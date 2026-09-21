@@ -2,7 +2,7 @@
 
 **Versi:** 1.0.0  
 **Base URL:** `http://localhost:3000/api/v1`  
-**Terakhir diperbarui:** 2026-05-14
+**Terakhir diperbarui:** 2026-05-21
 
 ---
 
@@ -14,9 +14,10 @@
 5. [Device Management](#device-management)
 6. [Device Control](#device-control)
 7. [Telemetry Data](#telemetry-data)
-8. [OTA Updates](#ota-updates)
-9. [MQTT Protocol](#mqtt-protocol)
-10. [Contoh Implementasi](#contoh-implementasi)
+8. [Mushroom Cycles & Harvest](#mushroom-cycles--harvest)
+9. [OTA Updates](#ota-updates)
+10. [MQTT Protocol](#mqtt-protocol)
+11. [Contoh Implementasi](#contoh-implementasi)
 
 ---
 
@@ -45,6 +46,7 @@ MQTT_CLIENT_ID="shroomsync-server"
 CORS_ORIGINS="http://localhost:3000,http://localhost:3001,https://dashboard.shroomsync.com"
 
 # Rate Limiting
+RATE_LIMIT_ENABLED=false             # Default false; set true only if limiter is needed
 RATE_LIMIT_WINDOW_MS=900000          # 15 menit (dalam millisecond)
 RATE_LIMIT_MAX_REQUESTS=100          # Max request per window
 
@@ -69,6 +71,152 @@ npm run dev
 # Setup database
 npm run db:push
 npm run db:generate
+```
+
+---
+
+## Autentikasi & Onboarding Petani
+
+ShroomSync menggunakan sistem autentikasi **JWT (JSON Web Token)**. Sistem ini dirancang untuk mendukung alur onboarding akun petani baru:
+1. **Akun Dibuat Admin**: Petani diberikan akun dengan password default.
+2. **First-Time Login Check**: Saat login pertama, sistem mendeteksi akun baru (`mustSetupProfile: true`, `nextStep: "complete_profile"`).
+3. **Wajib Onboarding**: User baru wajib mengganti password default ke password pribadi dan melengkapi data diri (Nama, No. WhatsApp, Nama Usaha Kumbung, Alamat).
+4. **Dashboard & Aktivasi Perangkat**: Setelah onboarding selesai, petani masuk ke dashboard dan dapat mengaktivasi satu atau banyak perangkat kumbung via ID / Scan Barcode.
+
+### 🔑 Endpoints
+
+#### POST /auth/login
+Login pengguna dengan email atau username.
+
+**Request:**
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "petani_sukamaju",
+  "password": "PasswordDefault123!"
+}
+```
+
+**Response — Akun Baru (Wajib Onboarding):**
+```json
+{
+  "status": "success",
+  "message": "Login berhasil. Silakan lengkapi data diri dan ganti password default Anda.",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "u-1234-uuid",
+      "email": "petani@gmail.com",
+      "username": "petani_sukamaju",
+      "fullName": null,
+      "role": "farmer",
+      "isFirstLogin": true,
+      "isProfileCompleted": false
+    },
+    "mustSetupProfile": true,
+    "nextStep": "complete_profile"
+  }
+}
+```
+
+**Response — Akun Lama (Langsung ke Dashboard):**
+```json
+{
+  "status": "success",
+  "message": "Login berhasil. Selamat datang kembali.",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "u-1234-uuid",
+      "email": "petani@gmail.com",
+      "username": "petani_sukamaju",
+      "fullName": "Pak Budi Santoso",
+      "role": "farmer",
+      "isFirstLogin": false,
+      "isProfileCompleted": true
+    },
+    "mustSetupProfile": false,
+    "nextStep": "dashboard"
+  }
+}
+```
+
+---
+
+#### POST /auth/complete-onboarding
+Menyelesaikan aktivasi profil akun baru: ganti password default & lengkapi biodata.
+
+**Headers:**
+```http
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request:**
+```json
+{
+  "currentPassword": "PasswordDefault123!",
+  "newPassword": "PasswordRahasiaBaru2026",
+  "fullName": "Budi Santoso",
+  "phoneNumber": "081234567890",
+  "farmName": "Kumbung Berkah Tiram Mandiri",
+  "farmAddress": "Desa Cibodas RT 03 RW 02, Lembang, Jawa Barat"
+}
+```
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "message": "Profil berhasil diperbarui dan password berhasil diganti. Selamat datang di ShroomSync!",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...(token_baru)",
+    "user": {
+      "id": "u-1234-uuid",
+      "email": "petani@gmail.com",
+      "username": "petani_sukamaju",
+      "fullName": "Budi Santoso",
+      "phoneNumber": "081234567890",
+      "farmName": "Kumbung Berkah Tiram Mandiri",
+      "farmAddress": "Desa Cibodas RT 03 RW 02, Lembang, Jawa Barat",
+      "isFirstLogin": false,
+      "isProfileCompleted": true
+    },
+    "mustSetupProfile": false,
+    "nextStep": "dashboard"
+  }
+}
+```
+
+---
+
+#### GET /auth/me
+Mengambil profil akun yang sedang login.
+
+**Headers:** `Authorization: Bearer {token}`
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "id": "u-1234-uuid",
+      "email": "petani@gmail.com",
+      "username": "petani_sukamaju",
+      "fullName": "Budi Santoso",
+      "phoneNumber": "081234567890",
+      "farmName": "Kumbung Berkah Tiram Mandiri",
+      "farmAddress": "Desa Cibodas RT 03 RW 02, Lembang, Jawa Barat",
+      "role": "farmer"
+    },
+    "deviceCount": 2,
+    "mustSetupProfile": false,
+    "nextStep": "dashboard"
+  }
+}
 ```
 
 ---
@@ -117,7 +265,8 @@ Untuk endpoint yang mengembalikan list data:
   "pagination": {
     "total": 150,
     "limit": 20,
-    "offset": 0
+    "offset": 0,
+    "hasMore": true
   }
 }
 ```
@@ -205,14 +354,18 @@ Semua error mengembalikan response dengan struktur:
 
 ### 🚦 Rate Limit Policy
 
+Rate limiting bersifat opt-in. Default `RATE_LIMIT_ENABLED=false`, supaya frontend bisa polling telemetry dan mengirim command tanpa terkena `429`.
+
+Jika `RATE_LIMIT_ENABLED=true`:
 - **Global Limit:** 100 requests per 15 menit
 - **Control Endpoints:** 20 requests per 15 menit (5x lebih ketat)
 - **OTA Endpoints:** 20 requests per 15 menit (5x lebih ketat)
 - **Health Check:** Tidak dibatasi
+- **Telemetry Routes:** Dipasang sebelum strict limiter, jadi tidak ikut limit control endpoint
 
 ### Rate Limit Headers
 
-Setiap response menyertakan header:
+Saat rate limiter aktif, response menyertakan header:
 
 ```
 RateLimit-Limit: 100           # Max requests dalam window
@@ -245,14 +398,89 @@ try {
 
 ### 📱 Endpoints
 
+
+#### POST /devices/activate
+Mengaktivasi / menautkan perangkat kumbung jamur baru ke akun petani (mendukung **Input Serial Number** atau **Scan Barcode / QR Code** fisik dari alat ESP32).
+
+> **Multi-Kumbung**: Satu petani dapat mengaktivasi banyak perangkat (misal Kumbung 1, Kumbung 2, dll).
+
+**Headers:** `Authorization: Bearer {token}`
+
+**Request:**
+```http
+POST /api/v1/devices/activate
+Content-Type: application/json
+
+{
+  "deviceId": "SS-0426-001",
+  "name": "Kumbung Barat - Tiram Putih"
+}
+```
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "message": "Perangkat berhasil diaktivasi dan ditautkan ke akun Anda",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "deviceId": "SS-0426-001",
+    "name": "Kumbung Barat - Tiram Putih",
+    "userId": "u-1234-uuid",
+    "hardwareVersion": "1.0",
+    "firmwareVersion": "2.1.0",
+    "isOnline": true,
+    "rssiDbm": -65,
+    "signalStrength": "Good",
+    "pumpStatus": "OFF",
+    "floorPumpStatus": "OFF",
+    "activatedAt": "2026-09-15T14:45:00Z"
+  }
+}
+```
+
+**Response Error (409 Conflict):**
+```json
+{
+  "status": "error",
+  "message": "Perangkat ini sudah diaktivasi oleh akun petani lain. Hubungi pemilik perangkat atau admin sistem."
+}
+```
+
+---
+
+#### POST /devices/unpair/:deviceId
+Melepaskan tautan perangkat kumbung dari akun petani.
+
+**Headers:** `Authorization: Bearer {token}`
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "message": "Perangkat berhasil dilepas dari akun Anda",
+  "data": {
+    "unshared": true,
+    "deviceId": "SS-0426-001"
+  }
+}
+```
+
+---
 #### GET /devices
 Mendapatkan list semua device yang terdaftar.
 
 **Request:**
 ```http
-GET /api/v1/devices
+GET /api/v1/devices?limit=20&offset=0
 Authorization: Bearer {token} (optional untuk future)
 ```
+
+**Query Parameters:**
+| Parameter | Type | Default | Deskripsi |
+|-----------|------|---------|-----------|
+| `limit` | number | 50 | Jumlah data per halaman |
+| `offset` | number | 0 | Jumlah data yang di-skip |
 
 **Response (200):**
 ```json
@@ -273,7 +501,13 @@ Authorization: Bearer {token} (optional untuk future)
       "createdAt": "2026-04-01T08:00:00Z",
       "updatedAt": "2026-05-14T10:25:30Z"
     }
-  ]
+  ],
+  "pagination": {
+    "total": 5,
+    "limit": 20,
+    "offset": 0,
+    "hasMore": false
+  }
 }
 ```
 
@@ -292,25 +526,27 @@ GET /api/v1/devices/SS-0426-001
 {
   "status": "success",
   "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "deviceId": "SS-0426-001",
-    "name": "Kumbung A - Shiitake",
-    "hardwareVersion": "1.0",
-    "firmwareVersion": "2.1.0",
-    "isOnline": true,
-    "rssiDbm": -65,
-    "uptimeMs": 3600000,
-    "sensorValid": true,
-    "lastSeenAt": "2026-05-14T10:25:30Z",
-    "createdAt": "2026-04-01T08:00:00Z",
-    "updatedAt": "2026-05-14T10:25:30Z",
+    "device": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "deviceId": "SS-0426-001",
+      "name": "Kumbung A - Shiitake",
+      "hardwareVersion": "1.0",
+      "firmwareVersion": "2.1.0",
+      "isOnline": true,
+      "rssiDbm": -65,
+      "uptimeMs": 3600000,
+      "sensorValid": true,
+      "lastSeenAt": "2026-05-14T10:25:30Z",
+      "createdAt": "2026-04-01T08:00:00Z",
+      "updatedAt": "2026-05-14T10:25:30Z"
+    },
     "config": {
       "controlMode": 2,
       "scheduleMode": 1,
-      "minS": 22,
-      "midS": 28,
-      "minK": 75,
-      "midK": 90,
+      "minSuhu": 22,
+      "midSuhu": 28,
+      "minKelembaban": 75,
+      "midKelembaban": 90,
       "timerMinute": 1,
       "timerSecond": 30,
       "floorTimerMinute": 2,
@@ -926,52 +1162,85 @@ GET /api/v1/devices/SS-0426-001/telemetry/history/latest
 
 ---
 
-## OTA Updates
+## Mushroom Cycles & Harvest
 
-### 🚀 Over-The-Air Updates
+Fitur ini dipakai untuk mencatat satu periode budidaya jamur per device/kumbung dan semua panen di dalam siklus tersebut. Untuk jamur tiram, satu siklus biasanya berjalan 3-4 bulan dan harvest bisa dicatat setiap hari.
 
-#### POST /ota/trigger/:deviceId
-Memicu update firmware untuk satu device.
+Status siklus yang didukung:
+- `active` — siklus sedang berjalan
+- `completed` — siklus selesai
+- `cancelled` — siklus dibatalkan
+
+---
+
+#### GET /devices/:deviceId/cycles
+Melihat daftar siklus budidaya pada device.
 
 **Request:**
 ```http
-POST /api/v1/ota/trigger/SS-0426-001
+GET /api/v1/devices/SS-0426-001/cycles?status=active&limit=20&offset=0
+```
+
+**Query Parameters:**
+| Parameter | Type | Default | Deskripsi |
+|-----------|------|---------|-----------|
+| `status` | string | - | Filter `active`, `completed`, atau `cancelled` |
+| `from` | date | - | Filter `startedAt` mulai tanggal tertentu |
+| `to` | date | - | Filter `startedAt` sampai tanggal tertentu |
+| `limit` | number | 100 | Jumlah data per request (max 1000) |
+| `offset` | number | 0 | Jumlah data yang di-skip |
+
+---
+
+#### POST /devices/:deviceId/cycles
+Membuat atau memulai siklus budidaya baru.
+
+**Request:**
+```http
+POST /api/v1/devices/SS-0426-001/cycles
 Content-Type: application/json
 
 {
-  "action": "update",
-  "hardware_version": "1.0",
-  "firmware_version": "1.1.0",
-  "url": "https://storage.shroomsync.com/firmware/v1.1.0.bin",
-  "checksum_sha256": "optional-sha256",
-  "force": false
+  "name": "Siklus Mei 2026 - Kumbung A",
+  "mushroomType": "Jamur Tiram",
+  "strain": "Tiram Putih",
+  "baglogCount": 1200,
+  "startedAt": "2026-05-21",
+  "expectedEndedAt": "2026-09-21",
+  "notes": "Batch awal musim kemarau"
 }
 ```
 
 **Body Parameters:**
 | Field | Type | Required | Deskripsi |
 |-------|------|----------|-----------|
-| `action` | string | ❌ | Aksi OTA, default `update` |
-| `hardware_version` | string | ✅ | Versi hardware target |
-| `firmware_version` | string | ✅ | Versi firmware target |
-| `url` | string | ✅ | URL download firmware (.bin file) |
-| `checksum_sha256` | string | ❌ | SHA-256 firmware untuk verifikasi |
-| `force` | boolean | ❌ | Paksa update walau versi sama, default `false` |
+| `name` | string | ❌ | Nama siklus |
+| `mushroomType` | string | ❌ | Default `Jamur Tiram` |
+| `strain` | string | ❌ | Varian/strain jamur |
+| `baglogCount` | number | ❌ | Jumlah baglog awal |
+| `startedAt` | date | ❌ | Tanggal mulai, default waktu request |
+| `expectedEndedAt` | date | ❌ | Estimasi selesai siklus |
+| `status` | string | ❌ | Default `active` |
+| `notes` | string | ❌ | Catatan siklus |
 
-**Response (200):**
+**Response (201):**
 ```json
 {
   "status": "success",
-  "message": "OTA trigger sent to SS-0426-001",
+  "message": "Cultivation cycle created successfully",
   "data": {
-    "topic": "shroomsync/ota/SS-0426-001/trigger",
-    "payload": {
-      "action": "update",
-      "hardware_version": "1.0",
-      "firmware_version": "1.1.0",
-      "url": "https://storage.shroomsync.com/firmware/v1.1.0.bin",
-      "checksum_sha256": "optional-sha256",
-      "force": false
+    "id": "cycle-uuid",
+    "deviceId": "SS-0426-001",
+    "name": "Siklus Mei 2026 - Kumbung A",
+    "mushroomType": "Jamur Tiram",
+    "strain": "Tiram Putih",
+    "baglogCount": 1200,
+    "startedAt": "2026-05-21T00:00:00.000Z",
+    "expectedEndedAt": "2026-09-21T00:00:00.000Z",
+    "endedAt": null,
+    "status": "active",
+    "_count": {
+      "harvests": 0
     }
   }
 }
@@ -979,104 +1248,206 @@ Content-Type: application/json
 
 ---
 
-#### POST /ota/legacy-trigger/:deviceId
-Memicu update firmware untuk device legacy.
+#### GET /devices/:deviceId/cycles/:cycleId
+Melihat detail satu siklus.
 
 **Request:**
 ```http
-POST /api/v1/ota/legacy-trigger/SS-0426-001
+GET /api/v1/devices/SS-0426-001/cycles/cycle-uuid
+```
+
+---
+
+#### PATCH /devices/:deviceId/cycles/:cycleId
+Update metadata atau status siklus.
+
+**Request:**
+```http
+PATCH /api/v1/devices/SS-0426-001/cycles/cycle-uuid
 Content-Type: application/json
 
 {
-  "action": "update",
-  "hardware_version": "1.0",
-  "firmware_version": "1.1.0",
-  "url": "https://storage.shroomsync.com/firmware/v1.1.0.bin",
-  "force": false
-}
-```
-
-**Response (200):**
-```json
-{
-  "status": "success",
-  "message": "Legacy OTA trigger sent to SS-0426-001",
-  "data": {
-    "topic": "SS-0426-001/legacy/ota/trigger",
-    "payload": {
-      "action": "update",
-      "hardware_version": "1.0",
-      "firmware_version": "1.1.0",
-      "url": "https://storage.shroomsync.com/firmware/v1.1.0.bin",
-      "force": false
-    }
-  }
+  "baglogCount": 1180,
+  "notes": "20 baglog rusak dikeluarkan"
 }
 ```
 
 ---
 
-#### POST /ota/broadcast
-**⚠️ DANGER** — Memicu update ke semua device sekaligus.
+#### POST /devices/:deviceId/cycles/:cycleId/complete
+Menandai siklus selesai.
 
 **Request:**
 ```http
-POST /api/v1/ota/broadcast
+POST /api/v1/devices/SS-0426-001/cycles/cycle-uuid/complete
 Content-Type: application/json
 
 {
-  "action": "update",
-  "hardware_version": "1.0",
-  "firmware_version": "1.1.0",
-  "url": "https://storage.shroomsync.com/firmware/v1.1.0.bin",
-  "force": false
+  "endedAt": "2026-09-15",
+  "notes": "Siklus selesai, kumbung dibersihkan"
 }
 ```
 
-**Response (200):**
+---
+
+#### DELETE /devices/:deviceId/cycles/:cycleId
+Menghapus siklus beserta semua catatan harvest di dalamnya.
+
+**Request:**
+```http
+DELETE /api/v1/devices/SS-0426-001/cycles/cycle-uuid
+```
+
+---
+
+#### GET /devices/:deviceId/cycles/:cycleId/harvests
+Melihat daftar catatan panen di dalam siklus.
+
+**Request:**
+```http
+GET /api/v1/devices/SS-0426-001/cycles/cycle-uuid/harvests?from=2026-06-01&to=2026-06-30
+```
+
+**Query Parameters:**
+| Parameter | Type | Default | Deskripsi |
+|-----------|------|---------|-----------|
+| `from` | date | - | Filter `harvestedAt` mulai tanggal tertentu |
+| `to` | date | - | Filter `harvestedAt` sampai tanggal tertentu |
+| `limit` | number | 100 | Jumlah data per request (max 1000) |
+| `offset` | number | 0 | Jumlah data yang di-skip |
+
+---
+
+#### POST /devices/:deviceId/cycles/:cycleId/harvests
+Mencatat panen. Endpoint ini bisa dipanggil setiap hari, atau lebih dari sekali per hari jika panen dilakukan beberapa batch.
+
+**Request:**
+```http
+POST /api/v1/devices/SS-0426-001/cycles/cycle-uuid/harvests
+Content-Type: application/json
+
+{
+  "harvestedAt": "2026-06-10T08:30:00.000Z",
+  "weightKg": 18.75,
+  "pricePerKg": 18000,
+  "grade": "A",
+  "notes": "Panen pagi"
+}
+```
+
+**Body Parameters:**
+| Field | Type | Required | Deskripsi |
+|-------|------|----------|-----------|
+| `harvestedAt` | date | ❌ | Waktu panen, default waktu request |
+| `weightKg` | number | ✅ | Berat panen dalam kg |
+| `pricePerKg` | number | ❌ | Harga per kg, dipakai untuk summary revenue |
+| `grade` | string | ❌ | Grade/kualitas panen |
+| `notes` | string | ❌ | Catatan panen |
+
+**Response (201):**
 ```json
 {
   "status": "success",
-  "message": "OTA broadcast sent to all devices",
+  "message": "Harvest recorded successfully",
   "data": {
-    "topic": "shroomsync/ota/broadcast",
-    "payload": {
-      "action": "update",
-      "hardware_version": "1.0",
-      "firmware_version": "1.1.0",
-      "url": "https://storage.shroomsync.com/firmware/v1.1.0.bin",
-      "force": false
-    }
+    "id": "harvest-uuid",
+    "cycleId": "cycle-uuid",
+    "harvestedAt": "2026-06-10T08:30:00.000Z",
+    "weightKg": 18.75,
+    "pricePerKg": 18000,
+    "grade": "A",
+    "notes": "Panen pagi"
   }
 }
 ```
 
 ---
 
-#### GET /ota/logs/:deviceId
-Melihat log update firmware.
+#### PATCH /devices/:deviceId/cycles/:cycleId/harvests/:harvestId
+Update catatan panen.
 
 **Request:**
 ```http
-GET /api/v1/ota/logs/SS-0426-001
+PATCH /api/v1/devices/SS-0426-001/cycles/cycle-uuid/harvests/harvest-uuid
+Content-Type: application/json
+
+{
+  "weightKg": 19.1,
+  "notes": "Revisi setelah timbang ulang"
+}
+```
+
+---
+
+#### DELETE /devices/:deviceId/cycles/:cycleId/harvests/:harvestId
+Menghapus catatan panen.
+
+**Request:**
+```http
+DELETE /api/v1/devices/SS-0426-001/cycles/cycle-uuid/harvests/harvest-uuid
+```
+
+---
+
+#### GET /devices/:deviceId/cycles/:cycleId/summary
+Melihat resume dan analisis hasil panen per siklus.
+
+**Request:**
+```http
+GET /api/v1/devices/SS-0426-001/cycles/cycle-uuid/summary
 ```
 
 **Response (200):**
 ```json
 {
   "status": "success",
-  "data": [
-    {
-      "id": "uuid-log-1",
+  "data": {
+    "cycle": {
+      "id": "cycle-uuid",
       "deviceId": "SS-0426-001",
-      "firmwareVersion": "1.1.0",
-      "firmwareUrl": "https://storage.shroomsync.com/firmware/v1.1.0.bin",
-      "progress": 100,
-      "status": "completed",
-      "triggeredAt": "2026-05-16T07:30:00.000Z",
-      "completedAt": "2026-05-16T07:32:15.000Z"
-    }
-  ]
+      "name": "Siklus Mei 2026 - Kumbung A",
+      "mushroomType": "Jamur Tiram",
+      "baglogCount": 1200,
+      "startedAt": "2026-05-21T00:00:00.000Z",
+      "status": "active",
+      "_count": {
+        "harvests": 2
+      }
+    },
+    "summary": {
+      "totalHarvests": 2,
+      "totalWeightKg": 36.25,
+      "totalRevenue": 652500,
+      "cycleAgeDays": 21,
+      "harvestDays": 2,
+      "averageWeightPerHarvestKg": 18.125,
+      "averageWeightPerCycleDayKg": 1.726,
+      "averageWeightPerHarvestDayKg": 18.125,
+      "yieldPerBaglogKg": 0.03,
+      "firstHarvestAt": "2026-06-10T08:30:00.000Z",
+      "latestHarvestAt": "2026-06-11T08:15:00.000Z",
+      "peakHarvestDay": {
+        "date": "2026-06-10",
+        "harvestCount": 1,
+        "totalWeightKg": 18.75,
+        "totalRevenue": 337500
+      }
+    },
+    "dailyBreakdown": [
+      {
+        "date": "2026-06-10",
+        "harvestCount": 1,
+        "totalWeightKg": 18.75,
+        "totalRevenue": 337500
+      },
+      {
+        "date": "2026-06-11",
+        "harvestCount": 1,
+        "totalWeightKg": 17.5,
+        "totalRevenue": 315000
+      }
+    ]
+  }
 }
 ```
 
@@ -1224,24 +1595,6 @@ Topic: SS-0426-001/state/setpoint/auto
 | `{deviceId}/state/schedule/slot/3` | `Jam3`, `Menit3` |
 | `{deviceId}/state/schedule/floor` | `FlrJam`, `FlrMenit` |
 
-**Contoh Payload — OTA Status:**
-```text
-Topic: shroomsync/ota/SS-0426-001/status
-```
-```json
-{
-  "device_id": "SS-0426-001",
-  "seq": 61,
-  "uptime_ms": 700000,
-  "data": {
-    "status": "completed",
-    "progress": 100,
-    "firmware_version": "1.1.0"
-  },
-  "clientId": "SS-ESP32-DB4EB580"
-}
-```
-
 ---
 
 #### Server Publish (Kirim ke ESP32)
@@ -1347,20 +1700,6 @@ Data:
 {
   "fan": 1,
   "on": true
-}
-```
-
-**10. Trigger OTA Update:**
-```text
-Topic: shroomsync/ota/{deviceId}/trigger
-Data:
-{
-  "action": "update",
-  "hardware_version": "1.0",
-  "firmware_version": "1.1.0",
-  "url": "https://storage.shroomsync.com/firmware/v1.1.0.bin",
-  "checksum_sha256": "optional-sha256",
-  "force": false
 }
 ```
 
@@ -1474,14 +1813,12 @@ import json
 
 API_URL = "http://localhost:3000/api/v1"
 
-def trigger_ota_update(device_id, firmware_url, hardware_version, firmware_version):
+def trigger_ota_update(device_id, firmware_url, version):
     endpoint = f"{API_URL}/ota/trigger/{device_id}"
     payload = {
-        "action": "update",
-        "hardware_version": hardware_version,
-        "firmware_version": firmware_version,
-        "url": firmware_url,
-        "force": False
+        "firmwareUrl": firmware_url,
+        "firmwareVersion": version,
+        "changelog": "Stability improvements"
     }
     
     response = requests.post(
@@ -1492,20 +1829,19 @@ def trigger_ota_update(device_id, firmware_url, hardware_version, firmware_versi
     
     data = response.json()
     if response.status_code == 200:
-        print(f"OTA triggered for {device_id}")
-        print(f"   Topic: {data['data']['topic']}")
-        print(f"   Version: {data['data']['payload']['firmware_version']}")
+        print(f"✅ OTA triggered for {device_id}")
+        print(f"   Status: {data['data']['status']}")
+        print(f"   ETA: {data['data']['estimatedDuration']}")
     else:
-        print(f"OTA failed: {data['message']}")
+        print(f"❌ OTA failed: {data['message']}")
     
     return data
 
 # Usage
 trigger_ota_update(
     "SS-0426-001",
-    "https://storage.shroomsync.com/firmware/v1.1.0.bin",
-    "1.0",
-    "1.1.0"
+    "https://storage.shroomsync.com/firmware/v2.2.0.bin",
+    "2.2.0"
 )
 ```
 

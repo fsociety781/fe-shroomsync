@@ -43,11 +43,17 @@ import {
   CalendarDays,
   Pencil,
   Trash2
+  Trash2,
+  ScanLine,
+  QrCode
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import './App.css';
 import api from './services/api';
 import config from './config';
+import LoginScreen from './components/LoginScreen';
+import OnboardingScreen from './components/OnboardingScreen';
+import BarcodeScannerModal from './components/BarcodeScannerModal';
 
 const MONITORING_RANGES = [
   { label: '10 Menit', minutes: 10 },
@@ -805,13 +811,15 @@ const getHeaderContext = (title = '') => {
   if (loweredTitle.includes('monitoring')) return { Icon: Activity, tone: 'sensor' };
   if (loweredTitle.includes('kontrol')) return { Icon: Sliders, tone: 'control' };
   if (loweredTitle.includes('analitik')) return { Icon: BarChart2, tone: 'analytics' };
+  if (loweredTitle.includes('kontrol')) return { Icon: Sliders, tone: 'control' };
+  if (loweredTitle.includes('analitik')) return { Icon: BarChart2, tone: 'analytics' };
   if (loweredTitle.includes('notifikasi')) return { Icon: Bell, tone: 'notify' };
   if (loweredTitle.includes('profil')) return { Icon: User, tone: 'profile' };
   return { Icon: CircuitBoard, tone: 'system' };
 };
 
 // --- Sidebar Component ---
-const Sidebar = ({ activePage, setActivePage, isOpen, onClose }) => (
+const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLogout }) => (
   <>
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="logo-container">
@@ -831,8 +839,8 @@ const Sidebar = ({ activePage, setActivePage, isOpen, onClose }) => (
           <User size={24} />
         </div>
         <div className="profile-info">
-          <h4>Raihan Muhammad</h4>
-          <p>Petani</p>
+          <h4>{currentUser?.fullName || currentUser?.username || 'Petani'}</h4>
+          <p>{currentUser?.farmName || (currentUser?.role === 'admin' ? 'Administrator' : 'Petani Kumbung')}</p>
         </div>
       </div>
       <SidebarTechAccent />
@@ -873,7 +881,7 @@ const Sidebar = ({ activePage, setActivePage, isOpen, onClose }) => (
       </nav>
 
       <div className="sidebar-footer">
-        <a href="#" className="nav-item">
+        <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); onLogout?.(); onClose?.(); }}>
           <LogOut size={20} />
           <span>Keluar</span>
         </a>
@@ -1319,6 +1327,7 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
 // --- 2. Kumbung Page Content ---
 const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDeviceId, setSelectedDeviceId, onMenuToggle }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [openMenu, setOpenMenu] = useState(null);
@@ -1333,25 +1342,69 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
   });
   const [toast, setToast] = useState(null);
 
+  const handleScanSuccess = (scanned) => {
+    setNewDevice((prev) => ({
+      name: scanned.name || prev.name || (scanned.deviceId ? `Kumbung ${scanned.deviceId}` : ''),
+      deviceId: scanned.deviceId || prev.deviceId,
+    }));
+    setShowAddModal(true);
+    setToast({ 
+      message: `✓ Barcode terbaca: ${scanned.deviceId}${scanned.name ? ` (${scanned.name})` : ''}`, 
+      type: 'success' 
+    });
+  };
+
   const handleAddDevice = async () => {
     if (!newDevice.name || !newDevice.deviceId) {
       setToast({ message: 'Nama dan ID Perangkat harus diisi', type: 'warning' });
       return;
     }
     try {
-      await api.devices.create({
-        deviceId: newDevice.deviceId.trim(),
-        name: newDevice.name.trim(),
-        hardwareVersion: '1.0',
-      });
+      const deviceId = newDevice.deviceId.trim();
+      const name = newDevice.name.trim();
+
+      if (api.auth.isAuthenticated()) {
+        // Jika sudah login: langsung aktivasi perangkat ke akun petani
+        await api.devices.activate({
+          deviceId,
+          name,
+        });
+      } else {
+        // Jika belum login: registrasi perangkat umum
+        await api.devices.create({
+          deviceId,
+          name,
+          hardwareVersion: '1.0',
+        });
+      }
+
       // Refetch devices from server
       await refetchDevices();
-      setToast({ message: '✓ Kumbung berhasil ditambahkan', type: 'success' });
+      setToast({ message: '✓ Perangkat kumbung berhasil diaktivasi', type: 'success' });
       setShowAddModal(false);
       setNewDevice({ name: '', deviceId: '' });
     } catch (error) {
-      console.error('Add failed:', error);
-      setToast({ message: 'Gagal menambahkan kumbung', type: 'error' });
+      console.error('Activation failed:', error);
+      const msg = error.getUserMessage?.() || error.message || 'Gagal menambahkan kumbung';
+      setToast({ message: msg, type: 'error' });
+    }
+  };
+
+  const handleUnpairDevice = async (kumbung) => {
+    try {
+      const id = kumbung.deviceId || kumbung.id;
+      setOpenMenu(null);
+      await api.devices.unpair(id);
+      await refetchDevices();
+      if (selectedDeviceId === id) {
+        const nextDevice = devices.find((device) => (device.deviceId || device.id) !== id);
+        setSelectedDeviceId(nextDevice ? (nextDevice.deviceId || nextDevice.id) : null);
+      }
+      setToast({ message: '✓ Perangkat berhasil dilepas dari akun Anda', type: 'success' });
+    } catch (error) {
+      console.error('Unpair failed:', error);
+      const msg = error.getUserMessage?.() || error.message || 'Gagal melepas tautan kumbung';
+      setToast({ message: msg, type: 'error' });
     }
   };
 
@@ -1446,6 +1499,21 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
             <Plus size={18} />
             <span>Tambah Kumbung</span>
           </button>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button 
+              className="secondary-button" 
+              onClick={() => setShowScannerModal(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              title="Scan Barcode / QR Perangkat ESP32"
+            >
+              <ScanLine size={18} />
+              <span>Scan Barcode</span>
+            </button>
+            <button className="primary-button" onClick={() => setShowAddModal(true)}>
+              <Plus size={18} />
+              <span>Tambah Kumbung</span>
+            </button>
+          </div>
         }
       />
       
@@ -1501,6 +1569,9 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
                           <button className="dropdown-item" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-primary)' }} onClick={() => handleUpdateFirmware(k)}>
                             Update Firmware
                           </button>
+                          <button className="dropdown-item" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-primary)' }} onClick={() => handleUnpairDevice(k)}>
+                            Lepas Tautan (Unpair)
+                          </button>
                           <button className="dropdown-item text-error" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--error)' }} onClick={() => handleDeleteClick(k)}>
                             Hapus Perangkat
                           </button>
@@ -1516,29 +1587,146 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
       </div>
 
       {/* Modal Tambah Kumbung */}
+      {/* Modal Tambah & Aktivasi Kumbung */}
       {showAddModal && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '400px', padding: '24px' }}>
             <h3 style={{ marginBottom: '8px' }}>Tambah Kumbung Baru</h3>
             <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '24px' }}>Tambahkan perangkat IoT baru ke dalam sistem.</p>
+            <h3 style={{ marginBottom: '8px' }}>Aktivasi & Tautkan Kumbung</h3>
+            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '24px' }}>Tautkan serial number / Device ID ESP32 fisik ke akun Anda.</p>
+          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '420px', maxWidth: '92vw', padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Aktivasi & Tautkan Kumbung</h3>
+              <button 
+                onClick={() => setShowAddModal(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                title="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '18px' }}>
+              Tautkan serial number / Device ID ESP32 fisik ke akun kumbung Anda.
+            </p>
             
+            {/* Banner Tombol Cepat Scan Barcode */}
+            <div 
+              onClick={() => setShowScannerModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(74, 124, 89, 0.12)',
+                border: '1px dashed rgba(74, 124, 89, 0.4)',
+                marginBottom: '18px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(74, 124, 89, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary, #5a9e6f)' }}>
+                  <ScanLine size={18} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Scan Barcode / QR Fisik
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                    Pindai stiker atau QR perangkat ESP32
+                  </div>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.78rem', color: 'var(--primary, #5a9e6f)', fontWeight: 600 }}>
+                Buka Kamera &rarr;
+              </span>
+            </div>
+
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Nama Kumbung</label>
               <input type="text" placeholder="Masukkan nama kumbung..." value={newDevice.name} onChange={(e) => setNewDevice({...newDevice, name: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }} />
+              <input 
+                type="text" 
+                placeholder="Masukkan nama kumbung..." 
+                value={newDevice.name} 
+                onChange={(e) => setNewDevice({...newDevice, name: e.target.value})} 
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }} 
+              />
             </div>
 
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>ID Perangkat (Device ID)</label>
               <input type="text" placeholder="Misal: SS-005" value={newDevice.deviceId} onChange={(e) => setNewDevice({...newDevice, deviceId: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }} />
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '0.9rem' }}>ID Perangkat (Device ID)</label>
+                <button
+                  type="button"
+                  onClick={() => setShowScannerModal(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--primary, #5a9e6f)',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '2px 4px',
+                  }}
+                >
+                  <QrCode size={13} />
+                  <span>Scan Ulang</span>
+                </button>
+              </div>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input 
+                  type="text" 
+                  placeholder="Misal: SS-005" 
+                  value={newDevice.deviceId} 
+                  onChange={(e) => setNewDevice({...newDevice, deviceId: e.target.value})} 
+                  style={{ width: '100%', padding: '12px 42px 12px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }} 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowScannerModal(true)}
+                  title="Scan Barcode / QR Code"
+                  style={{
+                    position: 'absolute',
+                    right: '6px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--primary, #5a9e6f)',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <ScanLine size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="modal-actions" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button className="secondary-button" onClick={() => setShowAddModal(false)}>Batal</button>
               <button className="primary-button" onClick={handleAddDevice}>Simpan Kumbung</button>
+              <button className="primary-button" onClick={handleAddDevice}>Simpan & Aktivasi</button>
             </div>
           </motion.div>
         </div>
       )}
+
+      {/* Barcode & QR Scanner Modal */}
+      <BarcodeScannerModal
+        isOpen={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        onScanSuccess={handleScanSuccess}
+      />
 
       {/* Modal Update Firmware */}
       {showFirmwareModal && firmwareTarget && (
@@ -2937,9 +3125,97 @@ const NotifikasiContent = ({ onMenuToggle }) => {
 }
 
 // --- 6. Profil Content ---
-const ProfilContent = ({ onMenuToggle }) => {
+const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, devices, onLogout }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    fullName: currentUser?.fullName || '',
+    phoneNumber: currentUser?.phoneNumber || '',
+    farmName: currentUser?.farmName || '',
+    farmAddress: currentUser?.farmAddress || '',
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const handleOpenEdit = () => {
+    setEditForm({
+      fullName: currentUser?.fullName || '',
+      phoneNumber: currentUser?.phoneNumber || '',
+      farmName: currentUser?.farmName || '',
+      farmAddress: currentUser?.farmAddress || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async (e) => {
+    e?.preventDefault();
+    setLoading(true);
+    try {
+      // Complete onboarding or update profile
+      const updatedUser = {
+        ...currentUser,
+        fullName: editForm.fullName.trim(),
+        phoneNumber: editForm.phoneNumber.trim(),
+        farmName: editForm.farmName.trim(),
+        farmAddress: editForm.farmAddress.trim(),
+      };
+      // Persist to local storage and state
+      api.auth.setUser(updatedUser);
+      setCurrentUser(updatedUser);
+      setShowEditModal(false);
+      setToast({ message: '✓ Informasi profil berhasil diperbarui', type: 'success' });
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Gagal memperbarui profil', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSavePassword = async (e) => {
+    e?.preventDefault();
+    if (!passwordForm.currentPassword || !passwordForm.newPassword) {
+      setToast({ message: 'Kata sandi saat ini dan baru wajib diisi', type: 'warning' });
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      setToast({ message: 'Kata sandi baru minimal 6 karakter', type: 'warning' });
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setToast({ message: 'Konfirmasi kata sandi tidak cocok', type: 'warning' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.auth.completeOnboarding({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+        fullName: currentUser?.fullName || 'Petani',
+        phoneNumber: currentUser?.phoneNumber || '',
+        farmName: currentUser?.farmName || '',
+        farmAddress: currentUser?.farmAddress || '',
+      });
+      setShowPasswordModal(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setToast({ message: '✓ Kata sandi berhasil diperbarui', type: 'success' });
+    } catch (err) {
+      console.error(err);
+      setToast({ message: err.getUserMessage?.() || err.message || 'Gagal mengubah kata sandi', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <Header 
         title="Profil Pengguna"
         onMenuToggle={onMenuToggle}
@@ -2958,30 +3234,56 @@ const ProfilContent = ({ onMenuToggle }) => {
               <div className="profile-card-header">
                 <div className="profile-avatar-large">
                   <User size={48} />
-                  <button className="edit-avatar-btn">
+                  <button className="edit-avatar-btn" onClick={handleOpenEdit} aria-label="Edit avatar">
                     <Camera size={14} />
                   </button>
                 </div>
                 <div className="profile-card-info">
-                  <h3>Raihan Muhammad</h3>
-                  <p className="text-sage font-semibold">Petani Utama</p>
+                  <h3>{currentUser?.fullName || currentUser?.username || 'Petani Jamur'}</h3>
+                  <p className="text-sage font-semibold">
+                    {currentUser?.role === 'admin' ? 'Administrator Sistem' : 'Petani Kumbung Jamur'}
+                  </p>
+                  {currentUser?.farmName && (
+                    <p className="text-muted" style={{ fontSize: '0.85rem', marginTop: '2px' }}>
+                      {currentUser.farmName}
+                    </p>
+                  )}
                 </div>
               </div>
               
               <div className="profile-details">
                 <div className="profile-detail-item">
+                  <User size={18} className="text-muted" />
+                  <span>@{currentUser?.username || 'petani'}</span>
+                </div>
+                <div className="profile-detail-item">
                   <Mail size={18} className="text-muted" />
-                  <span>raihan.muhammad@shroomsync.id</span>
+                  <span>{currentUser?.email || 'email@belum-diatur.com'}</span>
                 </div>
                 <div className="profile-detail-item">
                   <Phone size={18} className="text-muted" />
-                  <span>+62 812 3456 7890</span>
+                  <span>{currentUser?.phoneNumber || 'Nomor WhatsApp belum diisi'}</span>
+                </div>
+                {currentUser?.farmAddress && (
+                  <div className="profile-detail-item" style={{ alignItems: 'flex-start' }}>
+                    <Home size={18} className="text-muted" style={{ marginTop: '2px' }} />
+                    <span style={{ lineHeight: '1.4' }}>{currentUser.farmAddress}</span>
+                  </div>
+                )}
+                <div className="profile-detail-item">
+                  <CircuitBoard size={18} className="text-muted" />
+                  <span>{devices?.length || currentUser?.deviceCount || 0} Kumbung Terhubung</span>
                 </div>
               </div>
 
-              <button className="secondary-button" style={{ marginTop: '24px' }}>
-                Edit Informasi Profil
-              </button>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+                <button className="primary-button outline" style={{ flex: 1 }} onClick={handleOpenEdit}>
+                  Edit Profil
+                </button>
+                <button className="secondary-button" onClick={() => setShowPasswordModal(true)} title="Ganti Kata Sandi">
+                  <Key size={16} />
+                </button>
+              </div>
             </div>
           </motion.div>
 
@@ -2993,16 +3295,16 @@ const ProfilContent = ({ onMenuToggle }) => {
               transition={{ duration: 0.4, delay: 0.1 }}
             >
               <div className="panel-header">
-                <h3>Pengaturan Keamanan & Privasi</h3>
+                <h3>Pengaturan Keamanan & Akun</h3>
               </div>
               
               <div className="settings-list">
-                <div className="settings-item">
+                <div className="settings-item" onClick={() => setShowPasswordModal(true)} style={{ cursor: 'pointer' }}>
                   <div className="settings-info">
                     <div className="settings-icon"><Key size={18} /></div>
                     <div>
                       <h4>Ganti Kata Sandi</h4>
-                      <p>Perbarui kata sandi Anda secara berkala.</p>
+                      <p>Perbarui kata sandi akun secara berkala.</p>
                     </div>
                   </div>
                   <button className="action-button"><ChevronDown size={18} style={{ transform: 'rotate(-90deg)' }} /></button>
@@ -3012,22 +3314,25 @@ const ProfilContent = ({ onMenuToggle }) => {
                   <div className="settings-info">
                     <div className="settings-icon"><Shield size={18} /></div>
                     <div>
-                      <h4>Autentikasi Dua Langkah</h4>
-                      <p>Tambahkan lapisan keamanan ekstra ke akun Anda.</p>
+                      <h4>Status Akun</h4>
+                      <p>{currentUser?.isFirstLogin ? 'Akun Baru' : 'Akun Terverifikasi Aktif'}</p>
                     </div>
                   </div>
-                  <div className="toggle-switch active"></div>
+                  <div className="status-badge">
+                    <span className="status-dot bg-sage"></span>
+                    <span className="text-sage font-semibold">Aktif</span>
+                  </div>
                 </div>
 
-                <div className="settings-item">
+                <div className="settings-item" onClick={onLogout} style={{ cursor: 'pointer' }}>
                   <div className="settings-info">
-                    <div className="settings-icon"><Bell size={18} /></div>
+                    <div className="settings-icon" style={{ background: 'rgba(229, 83, 83, 0.1)', color: 'var(--error)' }}><LogOut size={18} /></div>
                     <div>
-                      <h4>Notifikasi Email</h4>
-                      <p>Terima laporan mingguan dan peringatan kritis.</p>
+                      <h4 style={{ color: 'var(--error)' }}>Keluar dari Aplikasi</h4>
+                      <p>Hapus sesi masuk pada perangkat ini.</p>
                     </div>
                   </div>
-                  <div className="toggle-switch active"></div>
+                  <button className="action-button"><ChevronDown size={18} style={{ transform: 'rotate(-90deg)' }} /></button>
                 </div>
               </div>
             </motion.div>
@@ -3043,6 +3348,110 @@ const ProfilContent = ({ onMenuToggle }) => {
           </div>
         </div>
       </div>
+
+      {/* Modal Edit Profil */}
+      {showEditModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '440px', padding: '24px' }}>
+            <h3 style={{ marginBottom: '8px' }}>Edit Informasi Profil</h3>
+            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '20px' }}>Perbarui data kontak dan usaha kumbung jamur Anda.</p>
+            
+            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Nama Lengkap</label>
+                <input 
+                  type="text" 
+                  className="control-input"
+                  value={editForm.fullName} 
+                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Nomor WhatsApp / HP</label>
+                <input 
+                  type="tel" 
+                  className="control-input"
+                  value={editForm.phoneNumber} 
+                  onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })} 
+                />
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Nama Kumbung / Usaha</label>
+                <input 
+                  type="text" 
+                  className="control-input"
+                  value={editForm.farmName} 
+                  onChange={(e) => setEditForm({ ...editForm, farmName: e.target.value })} 
+                />
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Alamat Lokasi Kumbung</label>
+                <textarea 
+                  className="control-input"
+                  rows={2}
+                  value={editForm.farmAddress} 
+                  onChange={(e) => setEditForm({ ...editForm, farmAddress: e.target.value })} 
+                />
+              </div>
+              <div className="modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button type="button" className="secondary-button" onClick={() => setShowEditModal(false)}>Batal</button>
+                <button type="submit" className="primary-button" disabled={loading}>Simpan Perubahan</button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal Ganti Password */}
+      {showPasswordModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '420px', padding: '24px' }}>
+            <h3 style={{ marginBottom: '8px' }}>Ganti Kata Sandi</h3>
+            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '20px' }}>Pastikan kata sandi baru Anda minimal 6 karakter.</p>
+            
+            <form onSubmit={handleSavePassword} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Kata Sandi Saat Ini</label>
+                <input 
+                  type="password" 
+                  className="control-input"
+                  placeholder="Masukkan password lama"
+                  value={passwordForm.currentPassword} 
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Kata Sandi Baru</label>
+                <input 
+                  type="password" 
+                  className="control-input"
+                  placeholder="Min. 6 karakter"
+                  value={passwordForm.newPassword} 
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Ulangi Kata Sandi Baru</label>
+                <input 
+                  type="password" 
+                  className="control-input"
+                  placeholder="Konfirmasi password baru"
+                  value={passwordForm.confirmPassword} 
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} 
+                  required 
+                />
+              </div>
+              <div className="modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button type="button" className="secondary-button" onClick={() => setShowPasswordModal(false)}>Batal</button>
+                <button type="submit" className="primary-button" disabled={loading}>Ganti Password</button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </>
   );
 };
@@ -4106,6 +4515,12 @@ function App() {
   const [liveSensorEvent, setLiveSensorEvent] = useState(null);
   const [liveHistoryEvent, setLiveHistoryEvent] = useState(null);
 
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState(() => api.auth.getUser());
+  const [isAuthenticated, setIsAuthenticated] = useState(() => api.auth.isAuthenticated());
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   const handleSensorTelemetry = useCallback((payload) => {
     const event = createRealtimeEvent(payload);
     if (!event) return;
@@ -4129,6 +4544,83 @@ function App() {
     onSensorTelemetry: handleSensorTelemetry,
     onHistoryTelemetry: handleHistoryTelemetry,
   });
+
+  // Verify auth session on boot
+  useEffect(() => {
+    let cancelled = false;
+    const verifyAuth = async () => {
+      if (!api.auth.isAuthenticated()) {
+        if (!cancelled) {
+          setIsAuthenticated(false);
+          setIsAuthChecking(false);
+        }
+        return;
+      }
+
+      try {
+        const profile = await api.auth.me();
+        if (!cancelled) {
+          setCurrentUser(profile);
+          setIsAuthenticated(true);
+          if (profile.mustSetupProfile) {
+            setShowOnboarding(true);
+          }
+        }
+      } catch (err) {
+        console.warn('[App] Verify auth warning:', err.message);
+        if (err.statusCode === 401) {
+          api.auth.logout();
+          if (!cancelled) {
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+          }
+        }
+      } finally {
+        if (!cancelled) setIsAuthChecking(false);
+      }
+    };
+
+    verifyAuth();
+
+    const handleUnauthorized = () => {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+    };
+
+    window.addEventListener('shroomsync:unauthorized', handleUnauthorized);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('shroomsync:unauthorized', handleUnauthorized);
+    };
+  }, []);
+
+  const handleLoginSuccess = (loginResponse) => {
+    setCurrentUser(loginResponse.user);
+    setIsAuthenticated(true);
+    if (loginResponse.mustSetupProfile) {
+      setShowOnboarding(true);
+    } else {
+      setShowOnboarding(false);
+    }
+    refetch();
+  };
+
+  const handleOnboardingComplete = (onboardingResponse) => {
+    const updatedUser = onboardingResponse?.user 
+      ? { ...onboardingResponse.user, mustSetupProfile: false } 
+      : { ...currentUser, mustSetupProfile: false };
+    setCurrentUser(updatedUser);
+    setShowOnboarding(false);
+    refetch();
+  };
+
+  const handleLogout = () => {
+    api.auth.logout();
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setShowOnboarding(false);
+    setActivePage('dashboard');
+  };
 
   // Auto-select first device
   useEffect(() => {
@@ -4155,6 +4647,27 @@ function App() {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
 
+  // If user is not authenticated and auth check finished, show Login Screen
+  if (!isAuthenticated && !isAuthChecking) {
+    return (
+      <LoginScreen 
+        onLoginSuccess={handleLoginSuccess}
+        onGuestContinue={() => setIsAuthenticated(true)}
+      />
+    );
+  }
+
+  // If user must setup profile (new farmer onboarding), show dedicated full-page OnboardingScreen
+  if (showOnboarding || currentUser?.mustSetupProfile) {
+    return (
+      <OnboardingScreen 
+        user={currentUser} 
+        onComplete={handleOnboardingComplete} 
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   return (
     <div className="app-container">
       <Sidebar 
@@ -4162,6 +4675,8 @@ function App() {
         setActivePage={setActivePage} 
         isOpen={sidebarOpen}
         onClose={closeSidebar}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
       <main className="main-content">
         {connectionError && (
@@ -4176,7 +4691,7 @@ function App() {
         {activePage === 'kontrol' && <KontrolContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} updateDevice={updateDevice} onMenuToggle={toggleSidebar} />}
         {activePage === 'analitik' && <AnalitikContent onMenuToggle={toggleSidebar} />}
         {activePage === 'notifikasi' && <NotifikasiContent onMenuToggle={toggleSidebar} />}
-        {activePage === 'profil' && <ProfilContent onMenuToggle={toggleSidebar} />}
+        {activePage === 'profil' && <ProfilContent onMenuToggle={toggleSidebar} currentUser={currentUser} setCurrentUser={setCurrentUser} devices={devices} onLogout={handleLogout} />}
       </main>
     </div>
   );

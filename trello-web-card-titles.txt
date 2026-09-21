@@ -1,0 +1,12 @@
+[P0] Dashboard Realtime Kumbung
+[P0] Manajemen Kumbung
+[P0] Monitoring Sensor & Riwayat
+[P0] Kontrol Device
+[P0] Siklus & Panen
+[P0] Stabilitas API Client & Error Handling
+[P1] Jadwal Otomatis Berbasis BMKG
+[P1] OTA Firmware Update via Web
+[P1] Pusat Notifikasi
+[P1] Analitik Kumbung
+[P2] Profil & Preferensi
+[P0] QA Responsive Web

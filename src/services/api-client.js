@@ -16,16 +16,23 @@ export class APIError extends Error {
     switch (this.statusCode) {
       case 400:
         return 'Input tidak valid. Periksa kembali data yang dikirim.';
+      case 401:
+        return 'Sesi login tidak valid atau telah berakhir. Silakan login kembali.';
+      case 403:
+        return 'Akses ditolak. Anda tidak memiliki izin untuk tindakan ini.';
       case 404:
         return 'Data tidak ditemukan.';
+        return 'Data atau perangkat tidak ditemukan.';
       case 409:
         return 'Data sudah ada atau sedang konflik.';
+        return this.message || 'Data sudah ada atau sedang konflik.';
       case 429:
         return this.retryAfter
           ? `Terlalu banyak permintaan. Coba lagi setelah ${new Date(this.retryAfter).toLocaleTimeString('id-ID')}.`
           : 'Terlalu banyak permintaan. Coba lagi sebentar.';
       case 500:
         return 'Server sedang bermasalah.';
+        return 'Server sedang bermasalah. Silakan coba beberapa saat lagi.';
       default:
         return this.message || 'Terjadi kesalahan jaringan.';
     }
@@ -40,6 +47,27 @@ export class APIError extends Error {
     }, {});
   }
 }
+
+const getStoredAuthToken = () => {
+  try {
+    return localStorage.getItem('shroomsync_token') || null;
+  } catch {
+    return null;
+  }
+};
+
+const notifyUnauthorized = () => {
+  try {
+    localStorage.removeItem('shroomsync_token');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('shroomsync:unauthorized'));
+    }
+  } catch {
+    // Ignore storage/event dispatch errors
+  }
+};
+
+const waitMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 class APIClient {
   constructor(baseURL = config.baseURL, options = {}) {
@@ -102,6 +130,10 @@ class APIClient {
       ? null
       : this.parseNativePayload(response.data, response.headers);
 
+    if (response.status === 401) {
+      notifyUnauthorized();
+    }
+
     if (response.status < 200 || response.status >= 300) {
       const message = payload?.message || payload?.error || `Request failed with status ${response.status}`;
       throw new APIError(message, response.status, payload?.errors, null, payload);
@@ -134,6 +166,10 @@ class APIClient {
           ? await response.json().catch(() => ({}))
           : await response.text();
 
+      if (response.status === 401) {
+        notifyUnauthorized();
+      }
+
       if (!response.ok) {
         const message = payload?.message || payload?.error || `Request failed with status ${response.status}`;
         throw new APIError(message, response.status, payload?.errors, null, payload);
@@ -154,10 +190,35 @@ class APIClient {
 
   async request(endpoint, options = {}) {
     const headers = { ...this.defaultHeaders, ...options.headers };
+  async executeRequest(endpoint, options, headers) {
+    if (this.isNativeHttp()) {
+      return await this.nativeRequest(endpoint, options, headers);
+    }
+    return await this.fetchRequest(endpoint, options, headers);
+  }
+
+  async request(endpoint, options = {}, retries = 0) {
+    const authToken = getStoredAuthToken();
+    const authHeaders = authToken && !options.headers?.Authorization
+      ? { Authorization: `Bearer ${authToken}` }
+      : {};
+
+    const headers = {
+      ...this.defaultHeaders,
+      ...authHeaders,
+      ...options.headers,
+    };
 
     try {
       if (this.isNativeHttp()) {
         return await this.nativeRequest(endpoint, options, headers);
+      return await this.executeRequest(endpoint, options, headers);
+    } catch (error) {
+      // Exponential backoff retry for 429 Too Many Requests (max 2 retries)
+      if (error instanceof APIError && error.statusCode === 429 && retries < 2) {
+        const delay = (retries + 1) * 1000;
+        await waitMs(delay);
+        return this.request(endpoint, options, retries + 1);
       }
 
       return await this.fetchRequest(endpoint, options, headers);
