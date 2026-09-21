@@ -10,8 +10,7 @@ import {
   Sprout, 
   ShieldCheck, 
   Sparkles,
-  Radio,
-  Check
+  Radio
 } from 'lucide-react';
 import api, { APIError } from '../services/api';
 
@@ -21,7 +20,6 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeChip, setActiveChip] = useState(null);
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -55,7 +53,6 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
 
   const handleQuickFill = (userType) => {
     setError(null);
-    setActiveChip(userType);
     if (userType === 'new') {
       setIdentifier('petani_baru');
       setPassword('PasswordDefault123!');
@@ -88,6 +85,7 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
                   src="/log.svg?v=2" 
                   alt="ShroomSync" 
                   onError={(e) => {
+                    // Fallback if svg missing
                     e.currentTarget.style.display = 'none';
                   }}
                 />
@@ -124,10 +122,7 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
                   type="text"
                   placeholder="Contoh: petani_sukamaju atau email@domain.com"
                   value={identifier}
-                  onChange={(e) => {
-                    setIdentifier(e.target.value);
-                    setActiveChip(null);
-                  }}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   disabled={loading}
                   autoComplete="username"
                   required
@@ -147,10 +142,7 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Masukkan kata sandi..."
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setActiveChip(null);
-                  }}
+                  onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                   autoComplete="current-password"
                   required
@@ -169,7 +161,7 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
 
             <button 
               type="submit" 
-              className="primary-button cta-button full-button login-btn"
+              className="primary-button full-button login-btn"
               disabled={loading}
             >
               {loading ? (
@@ -180,7 +172,7 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
               ) : (
                 <>
                   <span>Masuk ke Dashboard</span>
-                  <ArrowRight size={18} className="arrow-icon" />
+                  <ArrowRight size={18} />
                 </>
               )}
             </button>
@@ -189,37 +181,26 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
           {/* Quick Demo Fill Buttons for Testing */}
           <div className="login-demo-section">
             <div className="demo-divider">
-              <span>Akun Cepat untuk Uji Coba</span>
+              <span>Akun Uji Coba Cepat (Testing)</span>
             </div>
-            <div className="demo-cards-grid">
+            <div className="demo-chips">
               <button 
                 type="button" 
-                className={`demo-card-btn ${activeChip === 'new' ? 'selected' : ''}`}
+                className="demo-chip"
                 onClick={() => handleQuickFill('new')}
+                title="Akun baru dengan password default (memicu onboarding)"
               >
-                <div className="demo-card-icon gold">
-                  <Sparkles size={16} />
-                </div>
-                <div className="demo-card-text">
-                  <strong>Akun Baru (First Time)</strong>
-                  <span>petani_baru • Memicu onboarding data diri</span>
-                </div>
-                {activeChip === 'new' && <Check size={16} className="text-sage check-icon" />}
+                <Sparkles size={14} className="text-warning" />
+                <span>Akun Baru (First Time)</span>
               </button>
-
               <button 
                 type="button" 
-                className={`demo-card-btn ${activeChip === 'old' ? 'selected' : ''}`}
+                className="demo-chip"
                 onClick={() => handleQuickFill('old')}
+                title="Akun petani aktif langsung ke dashboard"
               >
-                <div className="demo-card-icon green">
-                  <ShieldCheck size={16} />
-                </div>
-                <div className="demo-card-text">
-                  <strong>Akun Lama (Normal)</strong>
-                  <span>petani_sukamaju • Langsung ke dashboard</span>
-                </div>
-                {activeChip === 'old' && <Check size={16} className="text-sage check-icon" />}
+                <ShieldCheck size={14} className="text-sage" />
+                <span>Akun Lama (Normal)</span>
               </button>
             </div>
           </div>
@@ -242,3 +223,4 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
     </div>
   );
 }
+
