@@ -6,15 +6,16 @@ import {
   Eye, 
   EyeOff, 
   ArrowRight, 
+  ArrowLeft,
   AlertCircle, 
   Sprout, 
   ShieldCheck, 
-  Sparkles,
+  Sparkles, 
   Radio
 } from 'lucide-react';
 import api, { APIError } from '../services/api';
 
-export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
+export default function LoginScreen({ onLoginSuccess, onGuestContinue, onBackToLanding }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -71,6 +72,32 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
         >
+          {/* Back to Landing Page Button */}
+          {onBackToLanding && (
+            <button 
+              type="button"
+              onClick={onBackToLanding}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(82, 163, 107, 0.25)',
+                color: 'var(--text-secondary, #9cb1a2)',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginBottom: '16px',
+                alignSelf: 'flex-start',
+                transition: 'all 0.2s',
+              }}
+            >
+              <ArrowLeft size={14} />
+              <span>Kembali ke Beranda</span>
+            </button>
+          )}
+
           {/* Header & Brand */}
           <div className="login-header">
             <div className="login-badge">
@@ -223,4 +250,3 @@ export default function LoginScreen({ onLoginSuccess, onGuestContinue }) {
     </div>
   );
 }
-

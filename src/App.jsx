@@ -42,10 +42,10 @@ import {
   Sprout,
   CalendarDays,
   Pencil,
-  Trash2
   Trash2,
   ScanLine,
-  QrCode
+  QrCode,
+  Globe
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import './App.css';
@@ -54,6 +54,7 @@ import config from './config';
 import LoginScreen from './components/LoginScreen';
 import OnboardingScreen from './components/OnboardingScreen';
 import BarcodeScannerModal from './components/BarcodeScannerModal';
+import LandingPage from './components/LandingPage';
 
 const MONITORING_RANGES = [
   { label: '10 Menit', minutes: 10 },
@@ -819,7 +820,7 @@ const getHeaderContext = (title = '') => {
 };
 
 // --- Sidebar Component ---
-const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLogout }) => (
+const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLogout, onOpenLanding }) => (
   <>
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="logo-container">
@@ -877,6 +878,10 @@ const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLo
         <a href="#" className={`nav-item ${activePage === 'profil' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('profil'); onClose?.(); }}>
           <User size={20} />
           <span>Profil</span>
+        </a>
+        <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); onOpenLanding?.(); onClose?.(); }}>
+          <Globe size={20} />
+          <span>Tentang ShroomSync</span>
         </a>
       </nav>
 
@@ -1495,16 +1500,12 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
         subtitle="Kelola semua kumbung yang Anda miliki."
         onMenuToggle={onMenuToggle}
         actions={
-          <button className="primary-button" onClick={() => setShowAddModal(true)}>
-            <Plus size={18} />
-            <span>Tambah Kumbung</span>
-          </button>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button 
               className="secondary-button" 
               onClick={() => setShowScannerModal(true)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              title="Scan Barcode / QR Perangkat ESP32"
+              title="Scan Barcode / QR SupaKu"
             >
               <ScanLine size={18} />
               <span>Scan Barcode</span>
@@ -1586,15 +1587,9 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
         </motion.div>
       </div>
 
-      {/* Modal Tambah Kumbung */}
       {/* Modal Tambah & Aktivasi Kumbung */}
       {showAddModal && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '400px', padding: '24px' }}>
-            <h3 style={{ marginBottom: '8px' }}>Tambah Kumbung Baru</h3>
-            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '24px' }}>Tambahkan perangkat IoT baru ke dalam sistem.</p>
-            <h3 style={{ marginBottom: '8px' }}>Aktivasi & Tautkan Kumbung</h3>
-            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '24px' }}>Tautkan serial number / Device ID ESP32 fisik ke akun Anda.</p>
           <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '420px', maxWidth: '92vw', padding: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
               <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Aktivasi & Tautkan Kumbung</h3>
@@ -1607,7 +1602,7 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
               </button>
             </div>
             <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '18px' }}>
-              Tautkan serial number / Device ID ESP32 fisik ke akun kumbung Anda.
+              Tautkan serial number / Device ID SupaKu fisik ke akun kumbung Anda.
             </p>
             
             {/* Banner Tombol Cepat Scan Barcode */}
@@ -1635,7 +1630,7 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
                     Scan Barcode / QR Fisik
                   </div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                    Pindai stiker atau QR perangkat ESP32
+                    Pindai stiker atau QR SupaKu
                   </div>
                 </div>
               </div>
@@ -1646,7 +1641,6 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
 
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Nama Kumbung</label>
-              <input type="text" placeholder="Masukkan nama kumbung..." value={newDevice.name} onChange={(e) => setNewDevice({...newDevice, name: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }} />
               <input 
                 type="text" 
                 placeholder="Masukkan nama kumbung..." 
@@ -1656,9 +1650,6 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
               />
             </div>
 
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>ID Perangkat (Device ID)</label>
-              <input type="text" placeholder="Misal: SS-005" value={newDevice.deviceId} onChange={(e) => setNewDevice({...newDevice, deviceId: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }} />
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <label style={{ fontSize: '0.9rem' }}>ID Perangkat (Device ID)</label>
@@ -1679,7 +1670,7 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
                   }}
                 >
                   <QrCode size={13} />
-                  <span>Scan Ulang</span>
+                  <span>Scan Barcode</span>
                 </button>
               </div>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -1714,7 +1705,6 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
 
             <div className="modal-actions" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button className="secondary-button" onClick={() => setShowAddModal(false)}>Batal</button>
-              <button className="primary-button" onClick={handleAddDevice}>Simpan Kumbung</button>
               <button className="primary-button" onClick={handleAddDevice}>Simpan & Aktivasi</button>
             </div>
           </motion.div>
@@ -4030,7 +4020,7 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, update
       <Header 
         title="Kontrol & Pengaturan"
         onMenuToggle={onMenuToggle}
-        subtitle="Konfigurasi logika aktuator berdasarkan spesifikasi firmware ESP32."
+        subtitle="Konfigurasi logika aktuator berdasarkan spesifikasi firmware SupaKu."
       />
       
       <div className="page-content">
@@ -4520,6 +4510,9 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => api.auth.isAuthenticated());
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [viewMode, setViewMode] = useState(() => {
+    return api.auth.isAuthenticated() ? 'app' : 'landing';
+  });
 
   const handleSensorTelemetry = useCallback((payload) => {
     const event = createRealtimeEvent(payload);
@@ -4585,6 +4578,7 @@ function App() {
     const handleUnauthorized = () => {
       setIsAuthenticated(false);
       setCurrentUser(null);
+      setViewMode('landing');
     };
 
     window.addEventListener('shroomsync:unauthorized', handleUnauthorized);
@@ -4597,6 +4591,7 @@ function App() {
   const handleLoginSuccess = (loginResponse) => {
     setCurrentUser(loginResponse.user);
     setIsAuthenticated(true);
+    setViewMode('app');
     if (loginResponse.mustSetupProfile) {
       setShowOnboarding(true);
     } else {
@@ -4620,6 +4615,7 @@ function App() {
     setCurrentUser(null);
     setShowOnboarding(false);
     setActivePage('dashboard');
+    setViewMode('landing');
   };
 
   // Auto-select first device
@@ -4647,12 +4643,37 @@ function App() {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
 
-  // If user is not authenticated and auth check finished, show Login Screen
+  // If user is not authenticated and auth check finished
   if (!isAuthenticated && !isAuthChecking) {
+    if (viewMode === 'landing') {
+      return (
+        <LandingPage 
+          onGoToLogin={() => setViewMode('login')}
+          onGoToDashboard={() => setViewMode('login')}
+          isAuthenticated={false}
+        />
+      );
+    }
+
     return (
       <LoginScreen 
         onLoginSuccess={handleLoginSuccess}
-        onGuestContinue={() => setIsAuthenticated(true)}
+        onGuestContinue={() => {
+          setIsAuthenticated(true);
+          setViewMode('app');
+        }}
+        onBackToLanding={() => setViewMode('landing')}
+      />
+    );
+  }
+
+  // If authenticated user specifically views Landing Page / Company Profile
+  if (viewMode === 'landing') {
+    return (
+      <LandingPage 
+        onGoToLogin={() => setViewMode('app')}
+        onGoToDashboard={() => setViewMode('app')}
+        isAuthenticated={true}
       />
     );
   }
@@ -4677,6 +4698,7 @@ function App() {
         onClose={closeSidebar}
         currentUser={currentUser}
         onLogout={handleLogout}
+        onOpenLanding={() => setViewMode('landing')}
       />
       <main className="main-content">
         {connectionError && (

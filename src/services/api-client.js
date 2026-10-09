@@ -188,8 +188,6 @@ class APIClient {
     }
   }
 
-  async request(endpoint, options = {}) {
-    const headers = { ...this.defaultHeaders, ...options.headers };
   async executeRequest(endpoint, options, headers) {
     if (this.isNativeHttp()) {
       return await this.nativeRequest(endpoint, options, headers);
@@ -210,8 +208,6 @@ class APIClient {
     };
 
     try {
-      if (this.isNativeHttp()) {
-        return await this.nativeRequest(endpoint, options, headers);
       return await this.executeRequest(endpoint, options, headers);
     } catch (error) {
       // Exponential backoff retry for 429 Too Many Requests (max 2 retries)
@@ -221,8 +217,6 @@ class APIClient {
         return this.request(endpoint, options, retries + 1);
       }
 
-      return await this.fetchRequest(endpoint, options, headers);
-    } catch (error) {
       if (error instanceof APIError) throw error;
 
       throw new APIError(error.message || 'Network error', 0, null, error);

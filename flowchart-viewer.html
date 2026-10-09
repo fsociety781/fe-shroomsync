@@ -604,17 +604,17 @@
       {
         id: 'architecture',
         title: '1. Arsitektur Sistem Keseluruhan (End-to-End)',
-        desc: 'Interaksi menyeluruh antara Perangkat IoT ESP32, MQTT Broker, Backend API, Dev Tunnels, hingga Aplikasi Mobile APK & Web',
+        desc: 'Interaksi menyeluruh antara SupaKu (IoT), MQTT Broker, Backend API, Dev Tunnels, hingga Aplikasi Mobile APK & Web',
         code: `flowchart TD
-    subgraph IoT_Hardware["Perangkat IoT Kumbung (Fisik)"]
-        ESP32["Microcontroller ESP32"]
+    subgraph IoT_Hardware["Perangkat SupaKu (Hardware Kumbung)"]
+        SupaKuBox["SupaKu<br/>(IoT Controller)"]
         Sensors["Sensor DHT22 / SHT3x<br/>(Suhu dan Kelembaban)"]
         Actuators["Aktuator Relay:<br/>- Pompa Kabut (Mister)<br/>- Kipas Exhaust (Fan)<br/>- Pompa Lantai"]
         BarcodeLabel["Stiker Barcode / QR Code Fisik"]
         
-        Sensors -->|Data Pembacaan| ESP32
-        ESP32 -->|Kendalikan Relay ON/OFF| Actuators
-        BarcodeLabel -.->|Ditempel pada Casing| ESP32
+        Sensors -->|Data Pembacaan| SupaKuBox
+        SupaKuBox -->|Kendalikan Relay ON/OFF| Actuators
+        BarcodeLabel -.->|Ditempel pada Casing| SupaKuBox
     end
 
     subgraph Network_Protocol["Jalur Jaringan dan Protokol"]
@@ -643,10 +643,10 @@
         CameraScanner["Kamera HP / Scanner Barcode<br/>(Library html5-qrcode)"]
     end
 
-    ESP32 -->|"Publish Telemetri<br/>(kumbung/{id}/telemetry)"| MQTT_Broker
+    SupaKuBox -->|"Publish Telemetri<br/>(kumbung/{id}/telemetry)"| MQTT_Broker
     MQTT_Broker -->|"Subscribe Data Masuk"| TelemetryService
     ControlService -->|"Publish Perintah Kontrol<br/>(kumbung/{id}/command)"| MQTT_Broker
-    MQTT_Broker -->|"Kirim Perintah ke ESP32"| ESP32
+    MQTT_Broker -->|"Kirim Perintah ke SupaKu"| SupaKuBox
 
     MobileAPK -->|"REST API Request via HTTPS"| DevTunnel
     WebApp -->|"REST API Request via HTTP/HTTPS"| DevTunnel
@@ -697,7 +697,7 @@
       {
         id: 'device_activation',
         title: '3. Tambah & Aktivasi Kumbung (Scan Barcode / QR)',
-        desc: 'Alur penautan hardware ESP32 ke akun petani via live camera scanner (html5-qrcode), haptic feedback, dan smart parsing',
+        desc: 'Alur penautan hardware SupaKu ke akun petani via live camera scanner (html5-qrcode), haptic feedback, dan smart parsing',
         code: `flowchart TD
     StartKumbung([Petani di Halaman Kumbung Saya]) --> ChooseAddOption{Pilih Metode Tambah}
     
@@ -716,7 +716,7 @@
     FallbackGallery --> ProcessImage[Decode Barcode dari File Gambar]
     
     PermGranted -- Ya --> StartCameraStream[Nyalakan Kamera Belakang / Torch]
-    StartCameraStream --> PointToCode[Arahkan Kamera ke Barcode/QR ESP32]
+    StartCameraStream --> PointToCode[Arahkan Kamera ke Barcode/QR SupaKu]
     
     PointToCode --> DetectCode{Barcode/QR Terdeteksi?}
     DetectCode -- Belum Terbaca --> PointToCode
@@ -745,9 +745,9 @@
       {
         id: 'telemetry_flow',
         title: '4. Telemetri Sensor & Monitoring Real-Time',
-        desc: 'Pipeline data pembacaan sensor suhu & kelembaban dari modul ESP32, penyimpanan database, hingga render grafik Recharts',
+        desc: 'Pipeline data pembacaan sensor suhu & kelembaban dari SupaKu, penyimpanan database, hingga render grafik Recharts',
         code: `flowchart TD
-    StartSensor([Siklus Pembacaan Sensor ESP32]) --> ReadHardware[Baca Sensor Suhu dan Kelembaban]
+    StartSensor([Siklus Pembacaan Sensor SupaKu]) --> ReadHardware[Baca Sensor Suhu dan Kelembaban]
     
     ReadHardware --> CheckSensorValid{Sensor Merespons Normal?}
     CheckSensorValid -- Error / NaN --> RetryRead[Coba Baca Ulang Sensor dalam 2 Detik]
@@ -755,11 +755,11 @@
     
     CheckSensorValid -- Valid --> BuildPayload["Format JSON Telemetri:<br/>- deviceId<br/>- temperature Celcius<br/>- humidity RH<br/>- uptimeMs<br/>- rssiDbm"]
     
-    BuildPayload --> CheckWifi{Koneksi WiFi ESP32?}
+    BuildPayload --> CheckWifi{Koneksi WiFi SupaKu?}
     CheckWifi -- Terputus --> ReconnectWifi[Coba Sambung Ulang ke Router]
     ReconnectWifi --> CheckWifi
     
-    CheckWifi -- Terhubung --> MqttPublish["ESP32 Publish ke MQTT Broker<br/>Topik: kumbung/{deviceId}/telemetry"]
+    CheckWifi -- Terhubung --> MqttPublish["SupaKu Publish ke MQTT<br/>Topik: kumbung/{deviceId}/telemetry"]
     
     MqttPublish --> BackendSubscriber[Backend ShroomSync Menerima Pesan MQTT]
     BackendSubscriber --> ValidateDevice{Perangkat Terdaftar di DB?}
@@ -787,9 +787,9 @@
     CheckMode -- Mode 1: Manual --> UserToggle[Petani Menekan Toggle di Aplikasi]
     UserToggle --> SendManualCmd["Kirim POST /controls/{id}/action<br/>(payload: mister, fan, atau floorPump ON/OFF)"]
     SendManualCmd --> MqttManualPub["Backend Publish MQTT Command<br/>Topik: kumbung/{id}/command"]
-    MqttManualPub --> EspReceiveManual[ESP32 Menerima Perintah]
+    MqttManualPub --> EspReceiveManual[SupaKu Menerima Perintah]
     EspReceiveManual --> TriggerRelayManual[Ubah Status Pin Relay Aktuator]
-    TriggerRelayManual --> AckManual[ESP32 Kirim Status Terkini ke Server]
+    TriggerRelayManual --> AckManual[SupaKu Kirim Status Terkini ke Server]
     
     CheckMode -- Mode 2: Otomatis (Threshold) --> CheckCurrentSensor[Ambil Data Sensor Terkini]
     CheckCurrentSensor --> EvalTempHumidity{"Evaluasi Parameter:<br/>1. Kelembaban di Bawah Batas Min?<br/>2. Suhu di Atas Batas Max?"}

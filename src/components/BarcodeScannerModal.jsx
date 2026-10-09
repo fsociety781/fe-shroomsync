@@ -58,7 +58,7 @@ export const parseScannedDevice = (rawText) => {
     return { deviceId: prefixMatch[1].trim(), name: '' };
   }
 
-  // 4. Default: Raw string (misal: "SS-001", "ESP32-KUMBUNG-A")
+  // 4. Default: Raw string (misal: "SS-001", "SUPAKU-01")
   return { deviceId: text, name: '' };
 };
 
@@ -309,10 +309,10 @@ const BarcodeScannerModal = ({ isOpen, onClose, onScanSuccess }) => {
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary, #e6f0ea)' }}>
-                  Scan Barcode Perangkat
+                  Scan Barcode SupaKu
                 </h3>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary, #94a399)' }}>
-                  Arahkan kamera ke stiker atau layar QR ESP32
+                  Arahkan kamera ke stiker atau layar QR SupaKu
                 </p>
               </div>
             </div>
@@ -607,7 +607,7 @@ const BarcodeScannerModal = ({ isOpen, onClose, onScanSuccess }) => {
             }}
           >
             <span style={{ fontSize: '0.76rem', color: 'var(--text-muted, #6b7280)' }}>
-              Mendukung Barcode 1D (Code 128, EAN) & 2D QR Code perangkat ShroomSync
+              Mendukung Barcode 1D (Code 128, EAN) & 2D QR Code SupaKu
             </span>
           </div>
         </motion.div>
