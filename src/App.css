@@ -302,38 +302,28 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
-  border-radius: 20px; /* Pill shape */
-  color: var(--text-primary);
+  padding: 11px 16px;
+  border-radius: 12px;
+  color: var(--text-secondary);
   text-decoration: none;
   font-weight: 500;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
+  font-size: 0.88rem;
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-item:hover {
-  background:
-    linear-gradient(135deg, rgba(245, 239, 230, 0.84), rgba(255, 255, 255, 0.7));
-  color: var(--earth-brown);
+  background: rgba(21, 128, 61, 0.06);
+  color: var(--text-primary);
+  transform: translateX(2px);
 }
 
 .nav-item.active {
-  background:
-    linear-gradient(135deg, var(--warm-beige), rgba(45, 111, 106, 0.12));
-  color: var(--earth-brown);
-  font-weight: 600;
-  box-shadow: inset 3px 0 0 #2D6F6A;
-}
-
-.nav-item.active::after {
-  content: '';
-  position: absolute;
-  right: 12px;
-  width: 6px;
-  height: 6px;
-  background: #2D6F6A;
-  border-radius: 50%;
-  box-shadow: 0 0 0 5px rgba(45, 111, 106, 0.08);
+  background: linear-gradient(135deg, rgba(21, 128, 61, 0.12), rgba(34, 197, 94, 0.05));
+  border-color: rgba(21, 128, 61, 0.28);
+  color: #15803D;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(21, 128, 61, 0.08);
 }
 
 .sidebar-footer {
@@ -975,11 +965,14 @@
   flex-direction: column;
   justify-content: center;
   min-width: 0;
-  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stat-card.minimal:hover {
-  box-shadow: 0 6px 18px rgba(78, 58, 40, 0.1);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(21, 128, 61, 0.3);
   transform: translateY(-2px);
 }
 
@@ -1002,10 +995,12 @@
 }
 
 .stat-card.minimal .stat-title {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-muted);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1014,25 +1009,26 @@
 
 @media (max-width: 768px) {
   .stat-card.minimal .stat-title {
-    font-size: 0.75rem;
-    margin-bottom: 10px;
+    font-size: 0.72rem;
+    margin-bottom: 8px;
   }
 }
 
 @media (max-width: 480px) {
   .stat-card.minimal .stat-title {
-    font-size: 0.7rem;
-    margin-bottom: 8px;
+    font-size: 0.68rem;
+    margin-bottom: 6px;
   }
 }
 
 .stat-card.minimal .stat-value {
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.95rem;
+  font-weight: 800;
   color: var(--text-primary);
-  margin-bottom: 8px;
-  line-height: 1.2;
-  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
 }
 
 @media (max-width: 1024px) {
@@ -1411,35 +1407,37 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  border: 1px solid transparent;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
   border-radius: var(--radius-sm);
-  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .device-item:hover {
-  background-color: rgba(245, 239, 230, 0.58);
-  border-color: rgba(123, 94, 60, 0.1);
-  transform: translateY(-1px);
+  background-color: #ffffff;
+  border-color: rgba(21, 128, 61, 0.3);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .device-icon {
-  width: 32px;
-  height: 32px;
-  background:
-    linear-gradient(135deg, rgba(245, 239, 230, 0.92), rgba(45, 111, 106, 0.1));
-  color: var(--earth-brown);
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  background: rgba(21, 128, 61, 0.12);
+  color: #15803D;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .device-info h4 {
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .device-info,
@@ -1455,39 +1453,62 @@
   font-size: 0.8rem;
   color: var(--text-muted);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .notif-item {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  padding: 10px;
-  border: 1px solid transparent;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
   border-radius: var(--radius-sm);
-  transition: background-color 0.18s ease, border-color 0.18s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .notif-item:hover {
-  background-color: rgba(245, 239, 230, 0.58);
-  border-color: rgba(123, 94, 60, 0.1);
+  background-color: #ffffff;
+  border-color: rgba(21, 128, 61, 0.3);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .notif-icon {
-  margin-top: 2px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(21, 128, 61, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #15803D;
 }
 
-.notif-icon.error { color: var(--error); }
-.notif-icon.warning { color: var(--warning); }
+.notif-icon.error {
+  background: rgba(220, 38, 38, 0.12);
+  color: #DC2626;
+}
+
+.notif-icon.warning {
+  background: rgba(217, 119, 6, 0.12);
+  color: #D97706;
+}
 
 .notif-info p {
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.84rem;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
+  line-height: 1.4;
 }
 
 .notif-info .time {
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   color: var(--text-muted);
 }
 
@@ -5539,6 +5560,77 @@
     width: 100%;
     justify-content: center;
   }
+}
+
+/* ==========================================================================
+   Enterprise Segmented Tabs Controls (Technician & Admin Dashboards)
+   ========================================================================== */
+.technician-tabs-bar,
+.admin-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 6px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.technician-tabs-bar::-webkit-scrollbar,
+.admin-tabs-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.technician-tabs-bar .toggle-btn,
+.admin-tabs-bar .toggle-btn {
+  background: transparent;
+  color: #64748b;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.technician-tabs-bar .toggle-btn:hover:not(.active),
+.admin-tabs-bar .toggle-btn:hover:not(.active) {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.technician-tabs-bar .toggle-btn.active,
+.admin-tabs-bar .toggle-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.technician-tabs-bar .toggle-btn .tab-badge,
+.admin-tabs-bar .toggle-btn .tab-badge {
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 6px;
+  transition: all 0.2s ease;
+}
+
+.technician-tabs-bar .toggle-btn.active .tab-badge,
+.admin-tabs-bar .toggle-btn.active .tab-badge {
+  background: #ecfdf5;
+  color: #059669;
 }
 
 

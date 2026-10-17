@@ -18,7 +18,6 @@ import {
   ArrowLeft,
   Thermometer,
   Droplets,
-  Download,
   Filter,
   Camera,
   Mail,
@@ -45,9 +44,9 @@ import {
   Trash2,
   ScanLine,
   QrCode,
-  Globe
+  Wrench
 } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './App.css';
 import api from './services/api';
 import config from './config';
@@ -55,6 +54,11 @@ import LoginScreen from './components/LoginScreen';
 import OnboardingScreen from './components/OnboardingScreen';
 import BarcodeScannerModal from './components/BarcodeScannerModal';
 import LandingPage from './components/LandingPage';
+import TechnicianDashboard from './components/TechnicianDashboard';
+import AdminDashboard from './components/AdminDashboard';
+import ConfirmModal from './components/ConfirmModal';
+import { isMobileApp } from './utils/platform';
+import pushNotificationService from './services/PushNotificationService';
 
 const MONITORING_RANGES = [
   { label: '10 Menit', minutes: 10 },
@@ -62,7 +66,6 @@ const MONITORING_RANGES = [
   { label: '30 Menit', minutes: 30 },
 ];
 
-const ANALYTICS_RANGES = ['24 Jam', '7 Hari', '30 Hari'];
 const DASHBOARD_LATEST_REFRESH_MS = config.polling.dashboardLatestMs;
 const DASHBOARD_HISTORY_REFRESH_MS = config.polling.dashboardHistoryMs;
 const TELEMETRY_LATEST_REFRESH_MS = config.polling.telemetryLatestMs;
@@ -80,12 +83,23 @@ const parseReadingDate = (value) => {
 };
 
 const getReadingDate = (record) => {
-  const rawDate = record?.createdAt || record?.recordedAt || record?.time || record?.waktu;
+  const rawDate = record?.createdAt || record?.recordedAt || record?.time || record?.waktu || record?.timestamp;
   return parseReadingDate(rawDate);
 };
 
-const readTemperature = (record) => record?.temperature ?? record?.suhu;
-const readHumidity = (record) => record?.humidity ?? record?.kelembaban;
+const readTemperature = (record) => {
+  const val = record?.temperature ?? record?.suhu ?? record?.temp;
+  if (val === null || val === undefined || val === '') return null;
+  const num = Number(val);
+  return Number.isFinite(num) ? num : null;
+};
+
+const readHumidity = (record) => {
+  const val = record?.humidity ?? record?.kelembaban ?? record?.hum;
+  if (val === null || val === undefined || val === '') return null;
+  const num = Number(val);
+  return Number.isFinite(num) ? num : null;
+};
 
 const asPlainObject = (value) => (
   value && typeof value === 'object' && !Array.isArray(value) ? value : {}
@@ -202,7 +216,12 @@ const formatHistoryActivity = (record) => {
 
 const formatHistoryTime = (record) => {
   const date = getReadingDate(record);
-  return date ? date.toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--';
+  if (!date) return '--';
+  const now = new Date();
+  const isToday = now.toDateString() === date.toDateString();
+  return isToday
+    ? date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 };
 
 const formatDateTime = (value) => {
@@ -583,11 +602,6 @@ const readDeviceFromResponse = (payload) => {
   return candidate && (candidate.deviceId || candidate.id) ? candidate : null;
 };
 
-const chartTooltipFormatter = (value, name) => {
-  const formattedValue = Number(value).toFixed(2);
-  return [formattedValue, name];
-};
-
 const chartAxisTick = {
   fill: 'var(--text-primary)',
   fontSize: 11,
@@ -723,13 +737,6 @@ const Toast = ({ message, type = 'success', onClose }) => {
 };
 
 // --- Dummy Data ---
-const analyticsData = [
-  { name: 'Kumbung Utama', temp: 28.6, hum: 76 },
-  { name: 'Kumbung B', temp: 27.1, hum: 78 },
-  { name: 'Kumbung C', temp: 29.3, hum: 72 },
-  { name: 'Kumbung D', temp: 26.5, hum: 80 },
-];
-
 const notifications = [
   { id: 1, text: 'Suhu tinggi terdeteksi di Kumbung Utama', time: '10 menit yang lalu', type: 'error' },
   { id: 2, text: 'Kelembaban rendah di Kumbung B', time: '1 jam yang lalu', type: 'warning' },
@@ -744,26 +751,6 @@ const MushroomGlyph = ({ className = '' }) => (
     <span className="mushroom-glyph__cap mushroom-glyph__cap--main" />
     <span className="mushroom-glyph__stem" />
     <span className="mushroom-glyph__cap mushroom-glyph__cap--right" />
-  </div>
-);
-
-const SidebarTechAccent = () => (
-  <div className="sidebar-tech-accent" aria-hidden="true">
-    <div className="sidebar-tech-accent__visual">
-      <MushroomGlyph />
-      <div className="sidebar-tech-accent__tower">
-        <RadioTower size={16} />
-      </div>
-    </div>
-    <div className="sidebar-tech-accent__copy">
-      <span>IoT Mesh</span>
-      <strong>Shroom Habitat</strong>
-    </div>
-    <div className="sidebar-tech-accent__nodes">
-      <span />
-      <span />
-      <span />
-    </div>
   </div>
 );
 
@@ -793,17 +780,6 @@ const OrganicTechBand = ({ onlineCount, totalDevices }) => (
   </motion.div>
 );
 
-const HeaderTechAccent = () => (
-  <div className="header-tech-accent" aria-hidden="true">
-    <MushroomGlyph className="mushroom-glyph--mini" />
-    <div className="header-tech-accent__rail">
-      <span><Microchip size={14} /></span>
-      <span><RadioTower size={14} /></span>
-      <span><CircuitBoard size={14} /></span>
-    </div>
-  </div>
-);
-
 const getHeaderContext = (title = '') => {
   const loweredTitle = title.toLowerCase();
   if (loweredTitle.includes('dashboard')) return { Icon: LayoutDashboard, tone: 'dashboard' };
@@ -811,90 +787,208 @@ const getHeaderContext = (title = '') => {
   if (loweredTitle.includes('siklus') || loweredTitle.includes('panen')) return { Icon: Sprout, tone: 'farm' };
   if (loweredTitle.includes('monitoring')) return { Icon: Activity, tone: 'sensor' };
   if (loweredTitle.includes('kontrol')) return { Icon: Sliders, tone: 'control' };
-  if (loweredTitle.includes('analitik')) return { Icon: BarChart2, tone: 'analytics' };
-  if (loweredTitle.includes('kontrol')) return { Icon: Sliders, tone: 'control' };
-  if (loweredTitle.includes('analitik')) return { Icon: BarChart2, tone: 'analytics' };
   if (loweredTitle.includes('notifikasi')) return { Icon: Bell, tone: 'notify' };
   if (loweredTitle.includes('profil')) return { Icon: User, tone: 'profile' };
+  if (loweredTitle.includes('teknisi')) return { Icon: Wrench, tone: 'system' };
+  if (loweredTitle.includes('admin')) return { Icon: Shield, tone: 'system' };
   return { Icon: CircuitBoard, tone: 'system' };
 };
 
+// Daftar rute halaman yang valid di aplikasi ShroomSync per peran
+const FARMER_PAGES = [
+  'dashboard',
+  'kumbung',
+  'monitoring',
+  'siklus',
+  'kontrol',
+  'notifikasi',
+  'profil',
+];
+
+const ADMIN_PAGES = ['admin', 'profil'];
+const TECHNICIAN_PAGES = ['technician', 'profil'];
+
+// Helper untuk membaca target halaman awal dari URL bar atau storage dengan proteksi peran
+const resolveInitialPage = () => {
+  try {
+    const storedUser = api.auth.getUser();
+    const role = storedUser?.role?.toUpperCase();
+
+    let path = '';
+    let hash = '';
+    if (typeof window !== 'undefined') {
+      path = window.location.pathname.replace(/^\/+/, '').split('/')[0].toLowerCase();
+      hash = window.location.hash.replace(/^#\/?/, '').split('/')[0].toLowerCase();
+    }
+    const urlTarget = path || hash;
+    const saved = localStorage.getItem('shroomsync_active_page')?.toLowerCase();
+
+    // ADMIN: HANYA portal admin atau profil
+    if (role === 'ADMIN') {
+      if (urlTarget && ADMIN_PAGES.includes(urlTarget)) return urlTarget;
+      if (saved && ADMIN_PAGES.includes(saved)) return saved;
+      return 'admin';
+    }
+
+    // TECHNICIAN: HANYA portal teknisi atau profil
+    if (role === 'TECHNICIAN') {
+      if (urlTarget && TECHNICIAN_PAGES.includes(urlTarget)) return urlTarget;
+      if (saved && TECHNICIAN_PAGES.includes(saved)) return saved;
+      return 'technician';
+    }
+
+    // FARMER: HANYA halaman-halaman petani (tidak bisa buka admin/technician)
+    if (urlTarget && FARMER_PAGES.includes(urlTarget) && urlTarget !== 'admin' && urlTarget !== 'technician') {
+      return urlTarget;
+    }
+    if (saved && FARMER_PAGES.includes(saved) && saved !== 'admin' && saved !== 'technician') {
+      return saved;
+    }
+  } catch {
+    // ignore
+  }
+  return 'dashboard';
+};
+
 // --- Sidebar Component ---
-const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLogout, onOpenLanding }) => (
-  <>
-    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-      <div className="logo-container">
-        <div className="logo-icon" style={{ width: '50px', height: '50px', minWidth: '50px', minHeight: '50px' }}>
-          <img src="/log.svg?v=2" alt="ShroomSync" style={{ 
-            width: '100%', 
-            height: '100%', 
-            objectFit: 'contain',
-            display: 'block'
-          }} />
-        </div>
-        <h1 className="logo-text">ShroomSync</h1>
-      </div>
+const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLogout }) => {
+  const storedUser = api.auth.getUser();
+  const rawRole = currentUser?.role || storedUser?.role || 'FARMER';
+  const role = String(rawRole).toUpperCase();
 
-      <div className="sidebar-profile">
-        <div className="profile-avatar">
-          <User size={24} />
-        </div>
-        <div className="profile-info">
-          <h4>{currentUser?.fullName || currentUser?.username || 'Petani'}</h4>
-          <p>{currentUser?.farmName || (currentUser?.role === 'admin' ? 'Administrator' : 'Petani Kumbung')}</p>
-        </div>
-      </div>
-      <SidebarTechAccent />
-      
-      <nav className="nav-menu">
-        <a href="#" className={`nav-item ${activePage === 'dashboard' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('dashboard'); onClose?.(); }}>
-          <LayoutDashboard size={20} />
-          <span>Dashboard</span>
-        </a>
-        <a href="#" className={`nav-item ${activePage === 'kumbung' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('kumbung'); onClose?.(); }}>
-          <Home size={20} />
-          <span>Kumbung Saya</span>
-        </a>
-        <a href="#" className={`nav-item ${activePage === 'monitoring' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('monitoring'); onClose?.(); }}>
-          <Activity size={20} />
-          <span>Monitoring</span>
-        </a>
-        <a href="#" className={`nav-item ${activePage === 'siklus' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('siklus'); onClose?.(); }}>
-          <Sprout size={20} />
-          <span>Siklus & Panen</span>
-        </a>
-        <a href="#" className={`nav-item ${activePage === 'kontrol' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('kontrol'); onClose?.(); }}>
-          <Sliders size={20} />
-          <span>Kontrol</span>
-        </a>
-        <a href="#" className={`nav-item ${activePage === 'analitik' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('analitik'); onClose?.(); }}>
-          <BarChart2 size={20} />
-          <span>Analitik</span>
-        </a>
-        <a href="#" className={`nav-item ${activePage === 'notifikasi' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('notifikasi'); onClose?.(); }}>
-          <Bell size={20} />
-          <span>Notifikasi</span>
-        </a>
-        <a href="#" className={`nav-item ${activePage === 'profil' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('profil'); onClose?.(); }}>
-          <User size={20} />
-          <span>Profil</span>
-        </a>
-        <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); onOpenLanding?.(); onClose?.(); }}>
-          <Globe size={20} />
-          <span>Tentang ShroomSync</span>
-        </a>
-      </nav>
+  const isTechUser = role === 'TECHNICIAN';
+  const isAdminUser = role === 'ADMIN';
+  const isFarmerUser = !isTechUser && !isAdminUser;
 
-      <div className="sidebar-footer">
-        <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); onLogout?.(); onClose?.(); }}>
-          <LogOut size={20} />
-          <span>Keluar</span>
-        </a>
-      </div>
-    </aside>
-    <div className={`sidebar-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
-  </>
-);
+  const roleLabel = isTechUser 
+    ? 'Teknisi ShroomSync' 
+    : isAdminUser 
+    ? 'Administrator Wilayah' 
+    : (currentUser?.farmName || storedUser?.farmName || 'Petani Kumbung');
+
+  const roleBadge = isTechUser
+    ? { label: 'TEKNISI', bg: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: 'rgba(59, 130, 246, 0.4)' }
+    : isAdminUser
+    ? { label: 'ADMIN', bg: 'rgba(168, 85, 247, 0.2)', color: '#d8b4fe', border: 'rgba(168, 85, 247, 0.4)' }
+    : { label: 'PETANI', bg: 'rgba(74, 124, 89, 0.2)', color: '#86efac', border: 'rgba(74, 124, 89, 0.4)' };
+
+  return (
+    <>
+      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="logo-container">
+          <div className="logo-icon" style={{ width: '50px', height: '50px', minWidth: '50px', minHeight: '50px' }}>
+            <img src="/log.svg?v=2" alt="ShroomSync" style={{ 
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'contain',
+              display: 'block'
+            }} />
+          </div>
+          <h1 className="logo-text">ShroomSync</h1>
+        </div>
+
+        <div className="sidebar-profile">
+          <div className="profile-avatar" style={{
+            background: isTechUser ? 'rgba(59, 130, 246, 0.2)' : isAdminUser ? 'rgba(168, 85, 247, 0.2)' : undefined,
+            color: isTechUser ? '#60a5fa' : isAdminUser ? '#c084fc' : undefined
+          }}>
+            {isTechUser ? <Wrench size={22} /> : isAdminUser ? <Shield size={22} /> : <User size={22} />}
+          </div>
+          <div className="profile-info">
+            <h4 title={currentUser?.fullName || currentUser?.username} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {currentUser?.fullName || currentUser?.username || (isTechUser ? 'Teknisi Lapangan' : isAdminUser ? 'Admin Wilayah' : 'Petani')}
+            </h4>
+            <div style={{ marginTop: '3px' }}>
+              <span style={{
+                fontSize: '0.66rem',
+                fontWeight: 700,
+                letterSpacing: '0.3px',
+                padding: '2px 7px',
+                borderRadius: '5px',
+                backgroundColor: roleBadge.bg,
+                color: roleBadge.color,
+                border: `1px solid ${roleBadge.border}`,
+                display: 'inline-block'
+              }}>
+                {roleLabel}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <nav className="nav-menu">
+          {/* Petani Navigation - Khusus Petani */}
+          {isFarmerUser && (
+            <>
+              <a href="#" className={`nav-item ${activePage === 'dashboard' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('dashboard'); onClose?.(); }}>
+                <LayoutDashboard size={20} />
+                <span>Dashboard</span>
+              </a>
+              <a href="#" className={`nav-item ${activePage === 'kumbung' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('kumbung'); onClose?.(); }}>
+                <Home size={20} />
+                <span>Kumbung Saya</span>
+              </a>
+              <a href="#" className={`nav-item ${activePage === 'monitoring' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('monitoring'); onClose?.(); }}>
+                <Activity size={20} />
+                <span>Monitoring</span>
+              </a>
+              <a href="#" className={`nav-item ${activePage === 'siklus' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('siklus'); onClose?.(); }}>
+                <Sprout size={20} />
+                <span>Siklus & Panen</span>
+              </a>
+              <a href="#" className={`nav-item ${activePage === 'kontrol' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('kontrol'); onClose?.(); }}>
+                <Sliders size={20} />
+                <span>Kontrol</span>
+              </a>
+              <a href="#" className={`nav-item ${activePage === 'notifikasi' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('notifikasi'); onClose?.(); }}>
+                <Bell size={20} />
+                <span>Notifikasi</span>
+              </a>
+            </>
+          )}
+
+          {/* Teknisi Navigation - Khusus Teknisi */}
+          {isTechUser && (
+            <a 
+              href="#" 
+              className={`nav-item ${activePage === 'technician' ? 'active' : ''}`} 
+              onClick={(e) => { e.preventDefault(); setActivePage('technician'); onClose?.(); }}
+            >
+              <Wrench size={20} />
+              <span>Portal Teknisi</span>
+            </a>
+          )}
+
+          {/* Admin Navigation - Khusus Admin */}
+          {isAdminUser && (
+            <a 
+              href="#" 
+              className={`nav-item ${activePage === 'admin' ? 'active' : ''}`} 
+              onClick={(e) => { e.preventDefault(); setActivePage('admin'); onClose?.(); }}
+            >
+              <Shield size={20} />
+              <span>Portal Admin</span>
+            </a>
+          )}
+
+          {/* Menu Umum: Profil */}
+          <a href="#" className={`nav-item ${activePage === 'profil' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('profil'); onClose?.(); }}>
+            <User size={20} />
+            <span>Profil</span>
+          </a>
+        </nav>
+
+        <div className="sidebar-footer">
+          <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); onLogout?.(); onClose?.(); }}>
+            <LogOut size={20} />
+            <span>Keluar Sesi</span>
+          </a>
+        </div>
+      </aside>
+      <div className={`sidebar-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
+    </>
+  );
+};
 
 // --- Header Component ---
 const Header = ({ title, subtitle, actions, onBack, onMenuToggle }) => {
@@ -902,7 +996,6 @@ const Header = ({ title, subtitle, actions, onBack, onMenuToggle }) => {
 
   return (
     <header className="header" data-page-tone={tone}>
-      <HeaderTechAccent />
       <div className="header-title">
         {onMenuToggle && (
           <button className="mobile-menu-toggle" onClick={onMenuToggle}>
@@ -957,19 +1050,39 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
     .filter((value) => value != null);
   const dashboardAlerts = createDashboardAlerts(devices, validLatestReadings, dashboardNow);
   const formattedDashboardHistory = activeDashboardDeviceId ? downsampleData(
-    dashboardHistory
-      .map((record) => {
-        const date = getReadingDate(record);
-        return {
-          ...record,
-          temp: readTemperature(record),
-          hum: readHumidity(record),
-          readingDate: date,
-          time: date ? date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--',
-        };
-      })
-      .filter((record) => record.readingDate && record.temp != null && record.hum != null)
-      .sort((a, b) => a.readingDate - b.readingDate),
+    (() => {
+      let records = [...dashboardHistory];
+      if (records.length === 0 && activeReading) {
+        records = [{ ...activeReading, deviceId: activeDashboardDeviceId }];
+      }
+      const mapped = records
+        .map((record) => {
+          const date = getReadingDate(record) || new Date();
+          return {
+            ...record,
+            temp: readTemperature(record),
+            hum: readHumidity(record),
+            readingDate: date,
+            time: date ? date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--',
+          };
+        })
+        .filter((record) => record.readingDate && record.temp != null && record.hum != null)
+        .sort((a, b) => a.readingDate - b.readingDate);
+
+      if (mapped.length === 1) {
+        const single = mapped[0];
+        const prevDate = new Date(single.readingDate.getTime() - 60 * 1000);
+        return [
+          {
+            ...single,
+            readingDate: prevDate,
+            time: prevDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+          },
+          single,
+        ];
+      }
+      return mapped;
+    })(),
     36
   ) : [];
   
@@ -993,14 +1106,24 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
         if (cancelled) return;
 
         setDashboardNow(new Date().getTime());
-        setLatestReadings(
-          readingResults
-            .map((result, index) => ({
-              deviceId: currentDeviceIds[index],
-              sensor: result.status === 'fulfilled' ? result.value : null,
-            }))
-            .filter((reading) => reading.sensor)
-        );
+        const validReadings = readingResults
+          .map((result, index) => ({
+            deviceId: currentDeviceIds[index],
+            sensor: result.status === 'fulfilled' ? result.value : null,
+          }))
+          .filter((reading) => reading.sensor);
+
+        setLatestReadings(validReadings);
+
+        const currentActiveSensor = validReadings.find((r) => r.deviceId === activeDashboardDeviceId)?.sensor;
+        if (currentActiveSensor) {
+          setDashboardHistory((prevHistory) => (
+            mergeRealtimeRecord(prevHistory, {
+              ...currentActiveSensor,
+              deviceId: activeDashboardDeviceId,
+            }, { limit: REALTIME_SENSOR_HISTORY_LIMIT })
+          ));
+        }
       } catch (error) {
         console.error('Dashboard latest fetch failed:', error);
       }
@@ -1012,24 +1135,51 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
       cancelled = true;
       clearInterval(interval);
     };
-  }, [deviceIdKey]);
+  }, [activeDashboardDeviceId, deviceIdKey]);
+
+  useEffect(() => {
+    if (!activeReading || !activeDashboardDeviceId) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setDashboardHistory((prevHistory) => (
+        mergeRealtimeRecord(prevHistory, {
+          ...activeReading,
+          deviceId: activeDashboardDeviceId,
+        }, { limit: REALTIME_SENSOR_HISTORY_LIMIT })
+      ));
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [activeDashboardDeviceId, activeReading]);
 
   useEffect(() => {
     if (!activeDashboardDeviceId) return undefined;
 
     let cancelled = false;
     const fetchDashboardHistory = async () => {
-      const from = new Date(new Date().getTime() - 10 * 60 * 1000).toISOString();
-
       try {
-        const [historyResult, logsResult] = await Promise.all([
+        const from = new Date(new Date().getTime() - 10 * 60 * 1000).toISOString();
+
+        let [historyResult, logsResult] = await Promise.all([
           api.telemetry.getSensorHistory(activeDashboardDeviceId, { from, limit: 180 }).catch(() => []),
           api.telemetry.getHistory(activeDashboardDeviceId, { limit: 6 }).catch(() => []),
         ]);
 
+        // Fallback: Jika data 10 menit terakhir kosong (misal sensor jeda kirim atau baru aktif),
+        // otomatis ambil riwayat sensor terkini tanpa parameter 'from'
+        if (!Array.isArray(historyResult) || historyResult.length === 0) {
+          historyResult = await api.telemetry.getSensorHistory(activeDashboardDeviceId, { limit: 60 }).catch(() => []);
+        }
+
         if (cancelled) return;
 
-        setDashboardHistory(Array.isArray(historyResult) ? historyResult : []);
+        if (Array.isArray(historyResult) && historyResult.length > 0) {
+          setDashboardHistory((prevHistory) => {
+            let merged = [...historyResult];
+            prevHistory.forEach((item) => {
+              merged = mergeRealtimeRecord(merged, item, { limit: REALTIME_SENSOR_HISTORY_LIMIT });
+            });
+            return merged;
+          });
+        }
         setDashboardLogs(Array.isArray(logsResult) ? logsResult : []);
       } catch (error) {
         console.error('Dashboard history fetch failed:', error);
@@ -1156,10 +1306,14 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
             </div>
             <div className="stat-status text-sage">{averageHumidity.length} sensor terbaca</div>
           </div>
-          <div className="stat-card minimal">
+          <div className="stat-card minimal" style={{ cursor: dashboardAlerts.length > 0 ? 'pointer' : 'default' }} onClick={() => dashboardAlerts.length > 0 && setActivePage('notifikasi')}>
             <span className="stat-title">Alert Aktif</span>
-            <div className="stat-value">{dashboardAlerts.length}</div>
-            <div className="stat-status text-earth">Peringatan</div>
+            <div className="stat-value" style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : undefined }}>
+              {dashboardAlerts.length}
+            </div>
+            <div className="stat-status font-semibold" style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : 'var(--sage-green)' }}>
+              {dashboardAlerts.length > 0 ? 'Perlu Tindakan' : 'Semua Normal'}
+            </div>
           </div>
           <div className="stat-card minimal" style={{ cursor: 'pointer' }} onClick={() => setActivePage('kontrol')}>
             <span className="stat-title">
@@ -1211,11 +1365,20 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                         <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={15} minTickGap={24} />
                         <YAxis axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={chartAxisFormatter} domain={['dataMin - 2', 'dataMax + 2']} />
                         <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(value) => [`${Number(value).toFixed(2)}°C`, 'Suhu']} />
-                        <Area type="monotone" dataKey="temp" stroke="var(--chart-temp-line)" strokeWidth={2.5} fillOpacity={1} fill="url(#dashboardTempGradient)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-temp-line)' }} />
+                        <Area 
+                          type="monotone" 
+                          dataKey="temp" 
+                          stroke="var(--chart-temp-line)" 
+                          strokeWidth={2.5} 
+                          fillOpacity={1} 
+                          fill="url(#dashboardTempGradient)" 
+                          dot={formattedDashboardHistory.length <= 4 ? { r: 3.5, fill: 'var(--chart-temp-line)' } : false} 
+                          activeDot={{ r: 5, strokeWidth: 0, fill: 'var(--chart-temp-line)' }} 
+                        />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="empty-chart-state">Belum ada data suhu 10 menit terakhir.</div>
+                    <div className="empty-chart-state">Belum ada riwayat data suhu.</div>
                   )}
                 </div>
               </div>
@@ -1243,11 +1406,20 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                         <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={15} minTickGap={24} />
                         <YAxis axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={chartAxisFormatter} domain={['dataMin - 5', 'dataMax + 5']} />
                         <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Kelembaban']} />
-                        <Area type="monotone" dataKey="hum" stroke="var(--chart-hum-line)" strokeWidth={2.5} fillOpacity={1} fill="url(#dashboardHumGradient)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-hum-line)' }} />
+                        <Area 
+                          type="monotone" 
+                          dataKey="hum" 
+                          stroke="var(--chart-hum-line)" 
+                          strokeWidth={2.5} 
+                          fillOpacity={1} 
+                          fill="url(#dashboardHumGradient)" 
+                          dot={formattedDashboardHistory.length <= 4 ? { r: 3.5, fill: 'var(--chart-hum-line)' } : false} 
+                          activeDot={{ r: 5, strokeWidth: 0, fill: 'var(--chart-hum-line)' }} 
+                        />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="empty-chart-state">Belum ada data kelembaban 10 menit terakhir.</div>
+                    <div className="empty-chart-state">Belum ada riwayat data kelembaban.</div>
                   )}
                 </div>
               </div>
@@ -1330,27 +1502,18 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
 };
 
 // --- 2. Kumbung Page Content ---
-const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDeviceId, setSelectedDeviceId, onMenuToggle }) => {
+const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDeviceId, onMenuToggle }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState(null);
   const [openMenu, setOpenMenu] = useState(null);
-  const [newDevice, setNewDevice] = useState({ name: '', deviceId: '' });
-  const [showFirmwareModal, setShowFirmwareModal] = useState(false);
-  const [firmwareTarget, setFirmwareTarget] = useState(null);
-  const [firmwareForm, setFirmwareForm] = useState({
-    firmwareUrl: '',
-    firmwareVersion: '',
-    checksumSha256: '',
-    force: false,
-  });
+  const [newDevice, setNewDevice] = useState({ name: '', deviceId: '', activationCode: '' });
   const [toast, setToast] = useState(null);
 
   const handleScanSuccess = (scanned) => {
     setNewDevice((prev) => ({
       name: scanned.name || prev.name || (scanned.deviceId ? `Kumbung ${scanned.deviceId}` : ''),
       deviceId: scanned.deviceId || prev.deviceId,
+      activationCode: scanned.activationCode || prev.activationCode || '',
     }));
     setShowAddModal(true);
     setToast({ 
@@ -1367,76 +1530,32 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
     try {
       const deviceId = newDevice.deviceId.trim();
       const name = newDevice.name.trim();
+      const activationCode = newDevice.activationCode?.trim() || undefined;
 
-      if (api.auth.isAuthenticated()) {
-        // Jika sudah login: langsung aktivasi perangkat ke akun petani
-        await api.devices.activate({
-          deviceId,
-          name,
+      if (!api.auth.isAuthenticated()) {
+        setToast({ 
+          message: 'Silakan login dengan akun petani Anda terlebih dahulu untuk menautkan kumbung.', 
+          type: 'warning' 
         });
-      } else {
-        // Jika belum login: registrasi perangkat umum
-        await api.devices.create({
-          deviceId,
-          name,
-          hardwareVersion: '1.0',
-        });
+        return;
       }
+
+      await api.devices.activate({
+        deviceId,
+        name,
+        activationCode,
+      });
 
       // Refetch devices from server
       await refetchDevices();
       setToast({ message: '✓ Perangkat kumbung berhasil diaktivasi', type: 'success' });
       setShowAddModal(false);
-      setNewDevice({ name: '', deviceId: '' });
+      setNewDevice({ name: '', deviceId: '', activationCode: '' });
     } catch (error) {
       console.error('Activation failed:', error);
-      const msg = error.getUserMessage?.() || error.message || 'Gagal menambahkan kumbung';
+      const msg = error.payload?.message || error.message || error.getUserMessage?.() || 'Gagal menambahkan kumbung';
       setToast({ message: msg, type: 'error' });
     }
-  };
-
-  const handleUnpairDevice = async (kumbung) => {
-    try {
-      const id = kumbung.deviceId || kumbung.id;
-      setOpenMenu(null);
-      await api.devices.unpair(id);
-      await refetchDevices();
-      if (selectedDeviceId === id) {
-        const nextDevice = devices.find((device) => (device.deviceId || device.id) !== id);
-        setSelectedDeviceId(nextDevice ? (nextDevice.deviceId || nextDevice.id) : null);
-      }
-      setToast({ message: '✓ Perangkat berhasil dilepas dari akun Anda', type: 'success' });
-    } catch (error) {
-      console.error('Unpair failed:', error);
-      const msg = error.getUserMessage?.() || error.message || 'Gagal melepas tautan kumbung';
-      setToast({ message: msg, type: 'error' });
-    }
-  };
-
-  const handleDeleteDevice = async () => {
-    try {
-      const id = selectedDevice.deviceId || selectedDevice.id;
-      const nextDevice = devices.find((device) => (device.deviceId || device.id) !== id);
-      const nextDeviceId = nextDevice ? (nextDevice.deviceId || nextDevice.id) : null;
-      await api.devices.delete(id);
-      // Refetch devices from server
-      await refetchDevices();
-      if (selectedDeviceId === id) {
-        setSelectedDeviceId(nextDeviceId);
-      }
-      setToast({ message: '✓ Kumbung berhasil dihapus', type: 'success' });
-      setShowDeleteModal(false);
-      setSelectedDevice(null);
-    } catch (error) {
-      console.error('Delete failed:', error);
-      setToast({ message: 'Gagal menghapus kumbung', type: 'error' });
-    }
-  };
-
-  const handleDeleteClick = (kumbung) => {
-    setSelectedDevice(kumbung);
-    setShowDeleteModal(true);
-    setOpenMenu(null);
   };
 
   const handleDetailClick = (kumbung) => {
@@ -1445,51 +1564,10 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
     setOpenMenu(null);
   };
 
-  const handleUpdateFirmware = (kumbung) => {
-    setFirmwareTarget(kumbung);
-    setFirmwareForm({
-      firmwareUrl: '',
-      firmwareVersion: kumbung.firmwareVersion || '',
-      checksumSha256: '',
-      force: false,
-    });
-    setShowFirmwareModal(true);
-    setOpenMenu(null);
-  };
-
   const handleCyclesClick = (kumbung) => {
     setSelectedDeviceId(kumbung.deviceId || kumbung.id);
     setActivePage('siklus');
     setOpenMenu(null);
-  };
-
-  const handleSubmitFirmwareUpdate = async () => {
-    if (!firmwareTarget) return;
-
-    const firmwareUrl = firmwareForm.firmwareUrl.trim();
-    const firmwareVersion = firmwareForm.firmwareVersion.trim();
-    if (!firmwareUrl || !firmwareVersion) {
-      setToast({ message: 'URL firmware dan versi wajib diisi', type: 'warning' });
-      return;
-    }
-
-    try {
-      const id = firmwareTarget.deviceId || firmwareTarget.id;
-      setToast({ message: 'Mengirim perintah update firmware...', type: 'info' });
-      await api.ota.trigger(id, {
-        firmwareUrl,
-        firmwareVersion,
-        hardwareVersion: firmwareTarget.hardwareVersion || '1.0',
-        checksumSha256: firmwareForm.checksumSha256.trim(),
-        force: firmwareForm.force,
-      });
-      setToast({ message: '✓ Perintah update berhasil dikirim', type: 'success' });
-      setShowFirmwareModal(false);
-      setFirmwareTarget(null);
-    } catch (error) {
-      console.error('OTA trigger failed:', error);
-      setToast({ message: error.getUserMessage?.() || error.message || 'Gagal mengirim perintah update', type: 'error' });
-    }
   };
 
   return (
@@ -1545,8 +1623,8 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
                     <td data-label="ID" className="text-muted">{k.deviceId || k.id}</td>
                     <td data-label="Jaringan" className="text-muted" style={{ fontSize: '0.9rem' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span title="WiFi Signal"><Wifi size={12} style={{ display: 'inline', marginRight: '4px' }}/> {formatWifi(k.rssiDbm)}</span>
-                        <span title="Uptime"><Clock size={12} style={{ display: 'inline', marginRight: '4px' }}/> {formatUptime(k.uptimeMs)}</span>
+                        <span title="WiFi Signal"><Wifi size={12} style={{ display: 'inline', marginRight: '4px' }}/> {k.isOnline ? formatWifi(k.rssiDbm) : '--'}</span>
+                        <span title="Uptime"><Clock size={12} style={{ display: 'inline', marginRight: '4px' }}/> {k.isOnline ? formatUptime(k.uptimeMs) : '--'}</span>
                       </div>
                     </td>
                     <td data-label="Status">
@@ -1564,17 +1642,8 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
                           <button className="dropdown-item" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-primary)' }} onClick={() => handleDetailClick(k)}>
                             Detail Perangkat
                           </button>
-                          <button className="dropdown-item" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-primary)' }} onClick={() => handleCyclesClick(k)}>
+                          <button className="dropdown-item" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-primary)' }} onClick={() => handleCyclesClick(k)}>
                             Siklus & Panen
-                          </button>
-                          <button className="dropdown-item" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-primary)' }} onClick={() => handleUpdateFirmware(k)}>
-                            Update Firmware
-                          </button>
-                          <button className="dropdown-item" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-primary)' }} onClick={() => handleUnpairDevice(k)}>
-                            Lepas Tautan (Unpair)
-                          </button>
-                          <button className="dropdown-item text-error" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--error)' }} onClick={() => handleDeleteClick(k)}>
-                            Hapus Perangkat
                           </button>
                         </div>
                       )}
@@ -1703,6 +1772,33 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
               </div>
             </div>
 
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Key size={14} style={{ color: 'var(--primary, #5a9e6f)' }} />
+                  <span>Kode Aktivasi (Tertera di Stiker / Opsional)</span>
+                </label>
+              </div>
+              <input 
+                type="text" 
+                placeholder="Misal: ACT-XXXX atau SUPA-9921" 
+                value={newDevice.activationCode || ''} 
+                onChange={(e) => setNewDevice({...newDevice, activationCode: e.target.value.toUpperCase()})} 
+                style={{ 
+                  width: '100%', 
+                  padding: '12px', 
+                  borderRadius: '8px', 
+                  border: '1px solid var(--border-color)', 
+                  backgroundColor: 'transparent', 
+                  color: 'var(--text-primary)',
+                  letterSpacing: '0.05em'
+                }} 
+              />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '6px' }}>
+                *Terisi otomatis saat scan QR stiker fisik alat, atau ketik manual dari stiker perangkat.
+              </span>
+            </div>
+
             <div className="modal-actions" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button className="secondary-button" onClick={() => setShowAddModal(false)}>Batal</button>
               <button className="primary-button" onClick={handleAddDevice}>Simpan & Aktivasi</button>
@@ -1718,79 +1814,6 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, selectedDevice
         onScanSuccess={handleScanSuccess}
       />
 
-      {/* Modal Update Firmware */}
-      {showFirmwareModal && firmwareTarget && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '440px', padding: '24px' }}>
-            <h3 style={{ marginBottom: '8px' }}>Update Firmware</h3>
-            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '24px' }}>{firmwareTarget.name} ({firmwareTarget.deviceId || firmwareTarget.id})</p>
-
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>URL Firmware</label>
-              <input
-                type="url"
-                placeholder="https://example.com/firmware.bin"
-                value={firmwareForm.firmwareUrl}
-                onChange={(e) => setFirmwareForm({ ...firmwareForm, firmwareUrl: e.target.value })}
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Versi Firmware</label>
-              <input
-                type="text"
-                placeholder="1.1.0"
-                value={firmwareForm.firmwareVersion}
-                onChange={(e) => setFirmwareForm({ ...firmwareForm, firmwareVersion: e.target.value })}
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Checksum SHA-256</label>
-              <input
-                type="text"
-                placeholder="Opsional"
-                value={firmwareForm.checksumSha256}
-                onChange={(e) => setFirmwareForm({ ...firmwareForm, checksumSha256: e.target.value })}
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
-              />
-            </div>
-
-            <label className="form-group" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={firmwareForm.force}
-                onChange={(e) => setFirmwareForm({ ...firmwareForm, force: e.target.checked })}
-              />
-              Paksa update walau versi sama
-            </label>
-
-            <div className="modal-actions" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button className="secondary-button" onClick={() => setShowFirmwareModal(false)}>Batal</button>
-              <button className="primary-button" onClick={handleSubmitFirmwareUpdate}>Kirim Update</button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Modal Hapus Kumbung */}
-      {showDeleteModal && selectedDevice && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '400px', padding: '24px' }}>
-            <h3 style={{ marginBottom: '8px', color: 'var(--error)' }}>Hapus Kumbung</h3>
-            <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '24px' }}>
-              Apakah Anda yakin ingin menghapus <strong>{selectedDevice.name}</strong> ({selectedDevice.deviceId || selectedDevice.id})? Semua pengaturan dan riwayat telemetri perangkat ini akan dihapus permanen.
-            </p>
-            
-            <div className="modal-actions" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button className="secondary-button" onClick={() => setShowDeleteModal(false)}>Batal</button>
-              <button className="primary-button" style={{ backgroundColor: 'var(--error)', borderColor: 'var(--error)', color: '#fff' }} onClick={handleDeleteDevice}>Ya, Hapus</button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </>
   );
 };
@@ -1832,12 +1855,48 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
   const [submittingHarvest, setSubmittingHarvest] = useState(false);
   const [completingCycle, setCompletingCycle] = useState(false);
   const [toast, setToast] = useState(null);
+  const [deleteHarvestTarget, setDeleteHarvestTarget] = useState(null);
+  const [isDeletingHarvest, setIsDeletingHarvest] = useState(false);
+
+  const activeDeviceId = selectedDeviceId || devices[0]?.deviceId || devices[0]?.id || null;
+
+  useEffect(() => {
+    if (!selectedDeviceId && activeDeviceId) {
+      setSelectedDeviceId(activeDeviceId);
+    }
+  }, [activeDeviceId, selectedDeviceId, setSelectedDeviceId]);
 
   const selectedCycle = useMemo(
     () => cycles.find((cycle) => readEntityId(cycle) === selectedCycleId) || null,
     [cycles, selectedCycleId]
   );
-  const dailyBreakdown = Array.isArray(summary?.dailyBreakdown) ? summary.dailyBreakdown : [];
+  const dailyBreakdown = useMemo(() => {
+    if (Array.isArray(summary?.dailyBreakdown) && summary.dailyBreakdown.length > 0) {
+      return summary.dailyBreakdown;
+    }
+    if (!Array.isArray(harvests) || harvests.length === 0) return [];
+
+    const dailyMap = new Map();
+    for (const h of harvests) {
+      const date = parseReadingDate(h.harvestedAt) || new Date();
+      const dayKey = date.toISOString().slice(0, 10);
+      const existing = dailyMap.get(dayKey) || {
+        date: dayKey,
+        harvestCount: 0,
+        totalWeightKg: 0,
+        totalRevenue: 0,
+      };
+      existing.harvestCount += 1;
+      existing.totalWeightKg += Number(h.weightKg) || 0;
+      if (h.pricePerKg) {
+        existing.totalRevenue += (Number(h.weightKg) || 0) * Number(h.pricePerKg);
+      }
+      dailyMap.set(dayKey, existing);
+    }
+
+    return Array.from(dailyMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+  }, [summary, harvests]);
+
   const isSelectedCycleActive = selectedCycle?.status === 'active';
   const activeCycleCount = cycles.filter((cycle) => cycle.status === 'active').length;
   const harvestTrendData = dailyBreakdown.slice(-14);
@@ -1869,7 +1928,8 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
   ), []);
 
   const loadCycles = useCallback(async (statusFilter = cycleStatusFilter) => {
-    if (!selectedDeviceId) {
+    const targetDeviceId = selectedDeviceId || devices[0]?.deviceId || devices[0]?.id;
+    if (!targetDeviceId) {
       setCycles([]);
       setSelectedCycleId(null);
       return [];
@@ -1882,12 +1942,13 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
       const params = statusFilter === 'active'
         ? { status: 'active', limit: 100, offset: 0 }
         : { limit: 100, offset: 0 };
-      const data = sortCycles(await api.cycles.list(selectedDeviceId, params));
+      const rawData = await api.cycles.list(targetDeviceId, params);
+      const data = sortCycles(rawData);
       setCycles(data);
       setSelectedCycleId((currentId) => (
         data.some((cycle) => readEntityId(cycle) === currentId)
           ? currentId
-          : readEntityId(data[0])
+          : (readEntityId(data[0]) || null)
       ));
       return data;
     } catch (error) {
@@ -1897,10 +1958,11 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
     } finally {
       setCyclesLoading(false);
     }
-  }, [cycleStatusFilter, selectedDeviceId, sortCycles]);
+  }, [cycleStatusFilter, devices, selectedDeviceId, sortCycles]);
 
   const loadCycleDetail = useCallback(async () => {
-    if (!selectedDeviceId || !selectedCycleId) {
+    const targetDeviceId = selectedDeviceId || devices[0]?.deviceId || devices[0]?.id;
+    if (!targetDeviceId || !selectedCycleId) {
       setSummary(null);
       setHarvests([]);
       return;
@@ -1911,8 +1973,8 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
 
     try {
       const [summaryResult, harvestResult] = await Promise.all([
-        api.cycles.summary(selectedDeviceId, selectedCycleId),
-        api.cycles.harvests(selectedDeviceId, selectedCycleId, { limit: 100, offset: 0 }),
+        api.cycles.summary(targetDeviceId, selectedCycleId),
+        api.cycles.harvests(targetDeviceId, selectedCycleId, { limit: 100, offset: 0 }),
       ]);
       setSummary(summaryResult);
       setHarvests(Array.isArray(harvestResult) ? harvestResult : []);
@@ -1922,7 +1984,7 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
     } finally {
       setDetailLoading(false);
     }
-  }, [selectedCycleId, selectedDeviceId]);
+  }, [devices, selectedCycleId, selectedDeviceId]);
 
   useEffect(() => {
     const loadId = window.setTimeout(() => {
@@ -1955,8 +2017,9 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
 
   const handleCreateCycle = async (event) => {
     event.preventDefault();
+    const targetDeviceId = selectedDeviceId || devices[0]?.deviceId || devices[0]?.id;
 
-    if (!selectedDeviceId) {
+    if (!targetDeviceId) {
       setToast({ message: 'Pilih kumbung terlebih dahulu', type: 'warning' });
       return;
     }
@@ -1966,30 +2029,36 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
       return;
     }
 
-    const baglogCount = cycleForm.baglogCount === '' ? undefined : Number(cycleForm.baglogCount);
-    if (baglogCount !== undefined && (!Number.isFinite(baglogCount) || baglogCount < 0)) {
-      setToast({ message: 'Jumlah baglog harus berupa angka positif', type: 'warning' });
-      return;
+    let baglogCount = undefined;
+    if (cycleForm.baglogCount !== '' && cycleForm.baglogCount != null) {
+      const parsed = parseInt(cycleForm.baglogCount, 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        setToast({ message: 'Jumlah baglog harus berupa bilangan bulat positif', type: 'warning' });
+        return;
+      }
+      baglogCount = parsed;
     }
 
     setSubmittingCycle(true);
     try {
       const cycleName = cycleForm.name.trim()
-        || `Siklus ${formatReadableDate(cycleForm.startedAt)} - ${selectedDevice?.name || selectedDeviceId}`;
-      const createdCycle = await api.cycles.create(selectedDeviceId, compactPayload({
+        || `Siklus ${formatReadableDate(cycleForm.startedAt)} - ${selectedDevice?.name || targetDeviceId}`;
+      const payload = compactPayload({
         name: cycleName,
         mushroomType: cycleForm.mushroomType.trim() || 'Jamur Tiram',
         strain: cycleForm.strain.trim(),
         baglogCount,
-        startedAt: cycleForm.startedAt,
-        expectedEndedAt: cycleForm.expectedEndedAt,
+        startedAt: new Date(cycleForm.startedAt).toISOString(),
+        expectedEndedAt: cycleForm.expectedEndedAt ? new Date(cycleForm.expectedEndedAt).toISOString() : undefined,
         notes: cycleForm.notes.trim(),
-      }));
+      });
+
+      const createdCycle = await api.cycles.create(targetDeviceId, payload);
       setCycleForm(createDefaultCycleForm());
       setToast({ message: '✓ Siklus baru berhasil dibuat', type: 'success' });
       const nextFilter = cycleStatusFilter === 'active' ? 'active' : cycleStatusFilter;
-      await loadCycles(nextFilter);
-      const createdId = readEntityId(createdCycle);
+      const reloadedCycles = await loadCycles(nextFilter);
+      const createdId = readEntityId(createdCycle) || (reloadedCycles[0] ? readEntityId(reloadedCycles[0]) : null);
       if (createdId) setSelectedCycleId(createdId);
     } catch (error) {
       console.error('Create cycle failed:', error);
@@ -2001,8 +2070,9 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
 
   const handleSubmitHarvest = async (event) => {
     event.preventDefault();
+    const targetDeviceId = selectedDeviceId || devices[0]?.deviceId || devices[0]?.id;
 
-    if (!selectedDeviceId || !selectedCycleId) {
+    if (!targetDeviceId || !selectedCycleId) {
       setToast({ message: 'Pilih siklus terlebih dahulu', type: 'warning' });
       return;
     }
@@ -2013,10 +2083,14 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
       return;
     }
 
-    const pricePerKg = harvestForm.pricePerKg === '' ? undefined : Number(harvestForm.pricePerKg);
-    if (pricePerKg !== undefined && (!Number.isFinite(pricePerKg) || pricePerKg < 0)) {
-      setToast({ message: 'Harga per kg harus berupa angka positif', type: 'warning' });
-      return;
+    let pricePerKg = undefined;
+    if (harvestForm.pricePerKg !== '' && harvestForm.pricePerKg != null) {
+      const parsedPrice = Number(harvestForm.pricePerKg);
+      if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+        setToast({ message: 'Harga per kg harus berupa angka positif', type: 'warning' });
+        return;
+      }
+      pricePerKg = Math.round(parsedPrice);
     }
 
     setSubmittingHarvest(true);
@@ -2027,15 +2101,15 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
           : new Date().toISOString(),
         weightKg,
         pricePerKg,
-        grade: harvestForm.grade.trim(),
+        grade: harvestForm.grade.trim() || 'A',
         notes: harvestForm.notes.trim(),
       });
 
       if (editingHarvestId) {
-        await api.cycles.updateHarvest(selectedDeviceId, selectedCycleId, editingHarvestId, payload);
+        await api.cycles.updateHarvest(targetDeviceId, selectedCycleId, editingHarvestId, payload);
         setToast({ message: '✓ Data panen berhasil diperbarui', type: 'success' });
       } else {
-        await api.cycles.createHarvest(selectedDeviceId, selectedCycleId, payload);
+        await api.cycles.createHarvest(targetDeviceId, selectedCycleId, payload);
         setToast({ message: '✓ Panen harian berhasil dicatat', type: 'success' });
       }
 
@@ -2066,24 +2140,36 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
     setHarvestForm(createDefaultHarvestForm());
   };
 
-  const handleDeleteHarvest = async (harvest) => {
-    const harvestId = readEntityId(harvest);
-    if (!selectedDeviceId || !selectedCycleId || !harvestId) return;
-    if (!window.confirm('Hapus catatan panen ini?')) return;
+  // Trigger Delete Harvest Confirmation Modal
+  const handleOpenDeleteHarvest = (harvest) => {
+    setDeleteHarvestTarget(harvest);
+  };
+
+  // Confirm Delete Harvest
+  const handleConfirmDeleteHarvest = async () => {
+    if (!deleteHarvestTarget) return;
+    const harvestId = readEntityId(deleteHarvestTarget);
+    const targetDeviceId = selectedDeviceId || devices[0]?.deviceId || devices[0]?.id;
+    if (!targetDeviceId || !selectedCycleId || !harvestId) return;
 
     try {
-      await api.cycles.deleteHarvest(selectedDeviceId, selectedCycleId, harvestId);
+      setIsDeletingHarvest(true);
+      await api.cycles.deleteHarvest(targetDeviceId, selectedCycleId, harvestId);
       setToast({ message: '✓ Catatan panen dihapus', type: 'success' });
+      setDeleteHarvestTarget(null);
       await refreshSelectedCycle();
     } catch (error) {
       console.error('Delete harvest failed:', error);
       setToast({ message: error.getUserMessage?.() || 'Gagal menghapus panen', type: 'error' });
+    } finally {
+      setIsDeletingHarvest(false);
     }
   };
 
   const handleCompleteCycle = async (event) => {
     event.preventDefault();
-    if (!selectedDeviceId || !selectedCycleId) return;
+    const targetDeviceId = selectedDeviceId || devices[0]?.deviceId || devices[0]?.id;
+    if (!targetDeviceId || !selectedCycleId) return;
 
     if (!completeForm.endedAt) {
       setToast({ message: 'Tanggal selesai siklus wajib diisi', type: 'warning' });
@@ -2092,8 +2178,8 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
 
     setCompletingCycle(true);
     try {
-      await api.cycles.complete(selectedDeviceId, selectedCycleId, compactPayload({
-        endedAt: completeForm.endedAt,
+      await api.cycles.complete(targetDeviceId, selectedCycleId, compactPayload({
+        endedAt: new Date(completeForm.endedAt).toISOString(),
         notes: completeForm.notes.trim(),
       }));
       setToast({ message: '✓ Siklus ditandai selesai', type: 'success' });
@@ -2138,7 +2224,7 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
         actions={
           <div className="kumbung-selector">
             <select
-              value={selectedDeviceId || ''}
+              value={activeDeviceId || ''}
               onChange={(event) => setSelectedDeviceId(event.target.value)}
               style={{ border: 'none', background: 'transparent', outline: 'none', cursor: 'pointer', fontWeight: 700, color: 'var(--text-primary)' }}
             >
@@ -2155,11 +2241,11 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
       />
 
       <div className="page-content cycles-page">
-        {!selectedDeviceId ? (
+        {!activeDeviceId ? (
           <div className="panel empty-state">
             <Sprout size={28} className="text-sage" />
-            <h3>Pilih kumbung terlebih dahulu</h3>
-            <p className="text-muted">Siklus dan panen selalu dicatat berdasarkan deviceId.</p>
+            <h3>Belum ada kumbung terdaftar</h3>
+            <p className="text-muted">Tambahkan atau tautkan SupaKu terlebih dahulu di menu Kumbung Saya untuk mulai mencatat siklus budidaya.</p>
           </div>
         ) : (
           <>
@@ -2175,7 +2261,7 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
                 </div>
                 <div>
                   <span className="cycle-eyebrow">Produksi Kumbung</span>
-                  <h3>{selectedDevice?.name || selectedDeviceId}</h3>
+                  <h3>{selectedDevice?.name || activeDeviceId}</h3>
                   <p>{selectedCycle ? selectedCycle.name || 'Siklus aktif' : 'Pilih atau buat siklus untuk mulai mencatat panen.'}</p>
                 </div>
               </div>
@@ -2221,7 +2307,7 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
                   <div>
                     <h3>Daftar Siklus</h3>
                     <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-                      {selectedDevice?.name || selectedDeviceId}
+                      {selectedDevice?.name || activeDeviceId}
                     </p>
                   </div>
                   <div className="toggle-group compact-toggle">
@@ -2512,7 +2598,7 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
                                   <button className="icon-button small-icon-button" type="button" onClick={() => handleEditHarvest(harvest)} title="Edit panen">
                                     <Pencil size={15} />
                                   </button>
-                                  <button className="icon-button small-icon-button danger-icon-button" type="button" onClick={() => handleDeleteHarvest(harvest)} title="Hapus panen">
+                                  <button className="icon-button small-icon-button danger-icon-button" type="button" onClick={() => handleOpenDeleteHarvest(harvest)} title="Hapus panen">
                                     <Trash2 size={15} />
                                   </button>
                                 </div>
@@ -2561,6 +2647,29 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
           </>
         )}
       </div>
+
+      {/* Confirmation Modal for Deleting Harvest */}
+      <ConfirmModal
+        isOpen={Boolean(deleteHarvestTarget)}
+        onClose={() => !isDeletingHarvest && setDeleteHarvestTarget(null)}
+        onConfirm={handleConfirmDeleteHarvest}
+        title="Hapus Catatan Panen"
+        message="Apakah Anda yakin ingin menghapus data catatan panen ini? Akumulasi hasil panen dan pendapatan siklus akan dihitung ulang."
+        itemDetails={
+          deleteHarvestTarget
+            ? {
+                label: 'Catatan Panen',
+                value: `${formatKg(deleteHarvestTarget.weightKg, 3)} (${deleteHarvestTarget.grade || 'Grade Standar'})`,
+                subValue: formatReadableDate(deleteHarvestTarget.harvestedAt, true),
+              }
+            : null
+        }
+        type="danger"
+        confirmText="Hapus Catatan"
+        cancelText="Batal"
+        loading={isDeletingHarvest}
+        dangerNote="Tindakan ini permanen. Catatan panen akan dihapus dari histori siklus."
+      />
     </>
   );
 };
@@ -2573,34 +2682,124 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
   const [historyLogs, setHistoryLogs] = useState([]);
   const [showAllHistoryLogs, setShowAllHistoryLogs] = useState(false);
 
+  const activeDeviceId = selectedDeviceId || devices[0]?.deviceId || devices[0]?.id || null;
+  const activeDevice = selectedDevice || devices.find(d => (d.deviceId || d.id) === activeDeviceId) || devices[0] || null;
+
+  const isOnline = Boolean(activeDevice?.isOnline);
+
+  const currentRssi = isOnline
+    ? (activeDevice?.rssiDbm ?? latestSensor?.rssi ?? latestSensor?.rssiDbm ?? latestSensor?.rssi_dbm ?? -65)
+    : null;
+
+  const currentUptime = isOnline
+    ? (activeDevice?.uptimeMs ?? latestSensor?.uptimeMs ?? latestSensor?.uptime_ms ?? latestSensor?.uptime ?? 3600000)
+    : null;
+
+  useEffect(() => {
+    if (!selectedDeviceId && activeDeviceId) {
+      setSelectedDeviceId(activeDeviceId);
+    }
+  }, [activeDeviceId, selectedDeviceId, setSelectedDeviceId]);
+
   const selectedRange = MONITORING_RANGES.find((range) => range.label === timeRange) || MONITORING_RANGES[0];
   const latestReadingTime = sensorHistory.reduce((latest, record) => {
     const date = getReadingDate(record);
     return date ? Math.max(latest, date.getTime()) : latest;
   }, 0);
   const rangeStartTime = latestReadingTime ? latestReadingTime - selectedRange.minutes * 60 * 1000 : 0;
+
   const formattedChartData = downsampleData(
-    sensorHistory
-      .map((record) => {
-        const date = getReadingDate(record);
-        return {
-          ...record,
-          temperature: readTemperature(record),
-          humidity: readHumidity(record),
-          readingDate: date,
-          time: date ? date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--',
-        };
-      })
-      .filter((record) => {
-        if (!record.readingDate) return false;
-        return record.readingDate.getTime() >= rangeStartTime && record.temperature != null && record.humidity != null;
-      })
-      .sort((a, b) => a.readingDate - b.readingDate)
+    (() => {
+      let records = [...sensorHistory];
+      if (records.length === 0 && latestSensor && (latestSensor.temperature !== '--' || latestSensor.suhu !== undefined)) {
+        records = [{ ...latestSensor, deviceId: activeDeviceId }];
+      }
+      const mapped = records
+        .map((record) => {
+          const date = getReadingDate(record) || new Date();
+          return {
+            ...record,
+            temperature: readTemperature(record),
+            humidity: readHumidity(record),
+            readingDate: date,
+            time: date ? date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--',
+          };
+        })
+        .filter((record) => {
+          if (!record.readingDate) return false;
+          return (rangeStartTime ? record.readingDate.getTime() >= rangeStartTime : true) && record.temperature != null && record.humidity != null;
+        })
+        .sort((a, b) => a.readingDate - b.readingDate);
+
+      if (mapped.length === 0 && records.length > 0) {
+        const fallbackMapped = records
+          .map((record) => {
+            const date = getReadingDate(record) || new Date();
+            return {
+              ...record,
+              temperature: readTemperature(record),
+              humidity: readHumidity(record),
+              readingDate: date,
+              time: date ? date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--',
+            };
+          })
+          .filter((record) => record.temperature != null && record.humidity != null)
+          .sort((a, b) => a.readingDate - b.readingDate);
+
+        if (fallbackMapped.length === 1) {
+          const single = fallbackMapped[0];
+          const prevDate = new Date(single.readingDate.getTime() - 60 * 1000);
+          return [
+            {
+              ...single,
+              readingDate: prevDate,
+              time: prevDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            },
+            single,
+          ];
+        }
+        return fallbackMapped;
+      }
+
+      if (mapped.length === 1) {
+        const single = mapped[0];
+        const prevDate = new Date(single.readingDate.getTime() - 60 * 1000);
+        return [
+          {
+            ...single,
+            readingDate: prevDate,
+            time: prevDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+          },
+          single,
+        ];
+      }
+      return mapped;
+    })()
   );
-  const mistPumpOn = isActiveValue(selectedDevice?.pumpStatus);
-  const floorPumpOn = isActiveValue(selectedDevice?.floorPumpStatus);
+
+  const mistPumpOn = isActiveValue(activeDevice?.pumpStatus);
+  const floorPumpOn = isActiveValue(activeDevice?.floorPumpStatus);
   const canToggleHistoryLogs = historyLogs.length > 10;
   const visibleHistoryLogs = showAllHistoryLogs ? historyLogs : historyLogs.slice(0, 10);
+
+  const currentTemp = readTemperature(latestSensor);
+  const currentHum = readHumidity(latestSensor);
+
+  const tempStatus = currentTemp == null 
+    ? { text: 'Menunggu Data', color: 'var(--text-muted)' }
+    : currentTemp >= 24 && currentTemp <= 28 
+    ? { text: 'Optimal (24-28°C)', color: '#15803D' }
+    : currentTemp > 28 
+    ? { text: 'Suhu Tinggi (>28°C)', color: '#DC2626' }
+    : { text: 'Suhu Rendah (<24°C)', color: '#D97706' };
+
+  const humStatus = currentHum == null 
+    ? { text: 'Menunggu Data', color: 'var(--text-muted)' }
+    : currentHum >= 80 && currentHum <= 95 
+    ? { text: 'Optimal (80-95%)', color: '#15803D' }
+    : currentHum < 80 
+    ? { text: 'Kering (<80%)', color: '#DC2626' }
+    : { text: 'Sangat Lembab (>95%)', color: '#D97706' };
 
   useEffect(() => {
     const resetId = window.setTimeout(() => {
@@ -2608,15 +2807,23 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
     }, 0);
 
     return () => window.clearTimeout(resetId);
-  }, [selectedDeviceId]);
+  }, [activeDeviceId]);
 
   useEffect(() => {
-    if (!selectedDeviceId) return;
+    if (!activeDeviceId) return;
 
     const fetchLatest = async () => {
       try {
-        const sensor = await api.telemetry.getSensorLatest(selectedDeviceId);
-        if (sensor) setLatestSensor(sensor);
+        const sensor = await api.telemetry.getSensorLatest(activeDeviceId);
+        if (sensor) {
+          setLatestSensor(sensor);
+          setSensorHistory((prevHistory) => (
+            mergeRealtimeRecord(prevHistory, {
+              ...sensor,
+              deviceId: activeDeviceId,
+            }, { limit: REALTIME_SENSOR_HISTORY_LIMIT })
+          ));
+        }
       } catch (error) {
         console.error('Latest telemetry fetch failed:', error);
       }
@@ -2625,21 +2832,41 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
     fetchLatest();
     const interval = setInterval(fetchLatest, TELEMETRY_LATEST_REFRESH_MS);
     return () => clearInterval(interval);
-  }, [selectedDeviceId]);
+  }, [activeDeviceId]);
 
   useEffect(() => {
-    if (!selectedDeviceId) return;
+    if (!activeDeviceId) return;
 
     const fetchHistory = async () => {
       try {
         const from = new Date(Date.now() - selectedRange.minutes * 60 * 1000).toISOString();
-        const [history, logs] = await Promise.allSettled([
-          api.telemetry.getSensorHistory(selectedDeviceId, { from, limit: 300 }),
-          api.telemetry.getHistory(selectedDeviceId)
+        let [history, logs] = await Promise.allSettled([
+          api.telemetry.getSensorHistory(activeDeviceId, { from, limit: 300 }),
+          api.telemetry.getHistory(activeDeviceId, { limit: 50 })
         ]);
 
-        if (history.status === 'fulfilled' && Array.isArray(history.value)) setSensorHistory(history.value);
-        if (logs.status === 'fulfilled' && Array.isArray(logs.value)) setHistoryLogs(logs.value);
+        let historyData = history.status === 'fulfilled' && Array.isArray(history.value) ? history.value : [];
+        if (historyData.length === 0) {
+          historyData = await api.telemetry.getSensorHistory(activeDeviceId, { limit: 100 }).catch(() => []);
+        }
+
+        if (Array.isArray(historyData) && historyData.length > 0) {
+          setSensorHistory((prevHistory) => {
+            let merged = [...historyData];
+            prevHistory.forEach((item) => {
+              merged = mergeRealtimeRecord(merged, item, { limit: REALTIME_SENSOR_HISTORY_LIMIT });
+            });
+            return merged;
+          });
+        }
+
+        let logsData = logs.status === 'fulfilled' && Array.isArray(logs.value) ? logs.value : [];
+        if (logsData.length === 0 && historyData.length > 0) {
+          logsData = historyData;
+        }
+        if (logsData.length > 0) {
+          setHistoryLogs(logsData);
+        }
       } catch (error) {
         console.error('Telemetry history fetch failed:', error);
       }
@@ -2648,10 +2875,10 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
     fetchHistory();
     const interval = setInterval(fetchHistory, TELEMETRY_HISTORY_REFRESH_MS);
     return () => clearInterval(interval);
-  }, [selectedDeviceId, selectedRange.minutes]);
+  }, [activeDeviceId, selectedRange.minutes]);
 
   useEffect(() => {
-    if (!selectedDeviceId || liveSensorEvent?.deviceId !== selectedDeviceId) return;
+    if (!activeDeviceId || liveSensorEvent?.deviceId !== activeDeviceId) return;
 
     window.setTimeout(() => {
       setLatestSensor(liveSensorEvent.record);
@@ -2659,10 +2886,10 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
         mergeRealtimeRecord(prevHistory, liveSensorEvent.record, { limit: REALTIME_SENSOR_HISTORY_LIMIT })
       ));
     }, 0);
-  }, [liveSensorEvent, selectedDeviceId]);
+  }, [liveSensorEvent, activeDeviceId]);
 
   useEffect(() => {
-    if (!selectedDeviceId || liveHistoryEvent?.deviceId !== selectedDeviceId) return;
+    if (!activeDeviceId || liveHistoryEvent?.deviceId !== activeDeviceId) return;
 
     window.setTimeout(() => {
       setHistoryLogs((prevLogs) => (
@@ -2676,12 +2903,12 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
         ));
       }
     }, 0);
-  }, [liveHistoryEvent, selectedDeviceId]);
+  }, [liveHistoryEvent, activeDeviceId]);
 
   return (
     <>
       <Header 
-        title={`Monitoring - ${selectedDevice?.name || '---'}`}
+        title={`Monitoring - ${activeDevice?.name || '---'}`}
         onMenuToggle={onMenuToggle}
         onBack={() => setActivePage('dashboard')}
       />
@@ -2696,7 +2923,7 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
             <span className="filter-label">Pilih Kumbung</span>
             <select 
               className="dropdown-small" 
-              value={selectedDeviceId || ''} 
+              value={activeDeviceId || ''} 
               onChange={(e) => setSelectedDeviceId(e.target.value)}
               style={{ border: 'none', background: 'transparent', outline: 'none', cursor: 'pointer', fontWeight: 'bold' }}
             >
@@ -2730,8 +2957,8 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
             </div>
             <div className="sensor-card-content">
               <span className="stat-title">Suhu (°C)</span>
-              <div className="stat-value">{formatMetric(readTemperature(latestSensor), '°C')}</div>
-              <div className="stat-status text-sage font-semibold">Normal</div>
+              <div className="stat-value">{formatMetric(currentTemp, '°C')}</div>
+              <div className="stat-status font-semibold" style={{ color: tempStatus.color }}>{tempStatus.text}</div>
             </div>
           </div>
 
@@ -2741,20 +2968,22 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
             </div>
             <div className="sensor-card-content">
               <span className="stat-title">Kelembaban</span>
-              <div className="stat-value">{formatMetric(readHumidity(latestSensor), '%')}</div>
-              <div className="stat-status text-sage font-semibold">Normal</div>
+              <div className="stat-value">{formatMetric(currentHum, '%')}</div>
+              <div className="stat-status font-semibold" style={{ color: humStatus.color }}>{humStatus.text}</div>
             </div>
           </div>
 
           <div className="stat-card minimal sensor-card-horizontal">
-            <div className="sensor-icon-large bg-earth-light">
-              <Wifi size={28} className="text-earth" />
+            <div className={`sensor-icon-large ${isOnline ? 'bg-earth-light' : 'bg-red-light'}`}>
+              <Wifi size={28} className={isOnline ? 'text-earth' : 'text-error'} />
             </div>
             <div className="sensor-card-content">
               <span className="stat-title">Jaringan & Sistem</span>
-              <div className="stat-value" style={{ fontSize: '1.2rem' }}>{formatWifi(selectedDevice?.rssiDbm)}</div>
+              <div className="stat-value" style={{ fontSize: '1.2rem', color: isOnline ? undefined : 'var(--error, #ef4444)' }}>
+                {isOnline ? formatWifi(currentRssi) : 'Offline'}
+              </div>
               <div className="stat-status text-muted font-semibold" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Clock size={12} /> {formatUptime(selectedDevice?.uptimeMs)}
+                <Clock size={12} /> {isOnline ? formatUptime(currentUptime) : 'Tidak ada sinyal'}
               </div>
             </div>
           </div>
@@ -2802,7 +3031,16 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
                           labelStyle={chartTooltipLabelStyle}
                           formatter={(value) => [`${Number(value).toFixed(2)}°C`, 'Suhu']}
                         />
-                        <Area type="monotone" dataKey="temperature" stroke="var(--chart-temp-line)" strokeWidth={2.5} fillOpacity={1} fill="url(#monitoringTempGradient)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-temp-line)' }} />
+                        <Area 
+                          type="monotone" 
+                          dataKey="temperature" 
+                          stroke="var(--chart-temp-line)" 
+                          strokeWidth={2.5} 
+                          fillOpacity={1} 
+                          fill="url(#monitoringTempGradient)" 
+                          dot={formattedChartData.length <= 4 ? { r: 3.5, fill: 'var(--chart-temp-line)' } : false} 
+                          activeDot={{ r: 5, strokeWidth: 0, fill: 'var(--chart-temp-line)' }} 
+                        />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
@@ -2838,7 +3076,16 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
                           labelStyle={chartTooltipLabelStyle}
                           formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Kelembaban']}
                         />
-                        <Area type="monotone" dataKey="humidity" stroke="var(--chart-hum-line)" strokeWidth={2.5} fillOpacity={1} fill="url(#monitoringHumGradient)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-hum-line)' }} />
+                        <Area 
+                          type="monotone" 
+                          dataKey="humidity" 
+                          stroke="var(--chart-hum-line)" 
+                          strokeWidth={2.5} 
+                          fillOpacity={1} 
+                          fill="url(#monitoringHumGradient)" 
+                          dot={formattedChartData.length <= 4 ? { r: 3.5, fill: 'var(--chart-hum-line)' } : false} 
+                          activeDot={{ r: 5, strokeWidth: 0, fill: 'var(--chart-hum-line)' }} 
+                        />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
@@ -2862,22 +3109,22 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
             <div className="info-list">
               <div className="info-item">
                 <span className="info-label">Nama Kumbung:</span>
-                <span className="info-value font-semibold">{selectedDevice?.name || '---'}</span>
+                <span className="info-value font-semibold">{activeDevice?.name || '---'}</span>
               </div>
               <div className="info-item">
                 <span className="info-label">ID Perangkat:</span>
-                <span className="info-value text-muted">{selectedDevice?.deviceId || selectedDevice?.id || '---'}</span>
+                <span className="info-value text-muted">{activeDevice?.deviceId || activeDevice?.id || '---'}</span>
               </div>
               <div className="info-item">
                 <span className="info-label">Status:</span>
-                <span className={`info-value ${selectedDevice?.isOnline ? 'text-sage' : 'text-error'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {selectedDevice?.isOnline ? <Wifi size={16} /> : <Wifi size={16} style={{ opacity: 0.5 }} />}
-                  {selectedDevice?.isOnline ? 'Online' : 'Offline'}
+                <span className={`info-value ${isOnline ? 'text-sage' : 'text-error'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Wifi size={16} style={{ opacity: isOnline ? 1 : 0.5 }} />
+                  {isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
               <div className="info-item">
                 <span className="info-label">Terakhir Terlihat:</span>
-                <span className="info-value text-muted">{formatDateTime(selectedDevice?.lastSeenAt)}</span>
+                <span className="info-value text-muted">{formatDateTime(activeDevice?.lastSeenAt)}</span>
               </div>
             </div>
 
@@ -2931,9 +3178,9 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
               </thead>
               <tbody>
                 {visibleHistoryLogs.map((log, idx) => (
-                  <tr key={idx}>
+                  <tr key={log.id || idx}>
                     <td data-label="Waktu" className="text-muted">{formatHistoryTime(log)}</td>
-                    <td data-label="Kategori" className="font-semibold">{log.category || log.actuator || (log.mode ? `Mode ${log.mode}` : 'Sistem')}</td>
+                    <td data-label="Kategori" className="font-semibold">{log.category || log.actuator || (log.mode ? `Mode ${log.mode}` : 'Sensor')}</td>
                     <td data-label="Aktivitas">{formatHistoryActivity(log)}</td>
                     <td data-label="Status"><span className="text-sage font-semibold">{log.status || 'OK'}</span></td>
                   </tr>
@@ -2959,80 +3206,6 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
     </>
   );
 }
-
-// --- 4. Analitik Content ---
-const AnalitikContent = ({ onMenuToggle }) => {
-  const [analyticsRange, setAnalyticsRange] = useState('24 Jam');
-
-  return (
-    <>
-      <Header 
-        title="Analitik Kumbung" 
-        subtitle="Bandingkan performa dan kondisi antar kumbung Anda."
-        onMenuToggle={onMenuToggle}
-        actions={
-          <button className="primary-button outline">
-            <Download size={18} />
-            <span>Ekspor Laporan</span>
-          </button>
-        }
-      />
-      
-      <div className="page-content">
-        <motion.div 
-          className="filter-bar"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="filter-group">
-            <span className="filter-label">Rentang Waktu</span>
-            <div className="toggle-group">
-              {ANALYTICS_RANGES.map((range) => (
-                <button
-                  key={range}
-                  className={`toggle-btn ${analyticsRange === range ? 'active' : ''}`}
-                  onClick={() => setAnalyticsRange(range)}
-                >
-                  {range}
-                </button>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          className="panel"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <div className="panel-header">
-            <div>
-              <h3>Perbandingan Rata-rata Suhu & Kelembaban</h3>
-              <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-                Ringkasan performa untuk rentang {analyticsRange.toLowerCase()}.
-              </p>
-            </div>
-          </div>
-          <div className="analytics-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analyticsData} margin={{ top: 20, right: 30, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="4 6" vertical={false} stroke={chartGridStroke} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={chartAxisTick} dy={10} />
-                <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={chartAxisFormatter} />
-                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={chartAxisFormatter} />
-                <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} cursor={{fill: 'rgba(231, 220, 198, 0.04)'}} formatter={chartTooltipFormatter} />
-                <Legend wrapperStyle={{ paddingTop: '20px', color: 'var(--text-primary)', fontSize: '0.8rem' }} />
-                <Bar yAxisId="left" name="Rata-rata Suhu (°C)" dataKey="temp" fill="var(--chart-temp-line)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                <Bar yAxisId="right" name="Rata-rata Kelembaban (%)" dataKey="hum" fill="var(--chart-hum-line)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      </div>
-    </>
-  );
-};
 
 // --- 5. Notifikasi Content ---
 const NotifikasiContent = ({ onMenuToggle }) => {
@@ -3088,7 +3261,7 @@ const NotifikasiContent = ({ onMenuToggle }) => {
                   {notif.type === 'error' && <AlertCircle size={24} />}
                   {notif.type === 'warning' && <AlertCircle size={24} />}
                   {notif.type === 'info' && <Info size={24} />}
-                  {notif.type === 'success' && <Info size={24} />}
+                  {notif.type === 'success' && <Check size={24} />}
                 </div>
                 <div className="notif-page-content">
                   <h4>{notif.text}</h4>
@@ -3144,24 +3317,29 @@ const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, devices, onL
 
   const handleSaveProfile = async (e) => {
     e?.preventDefault();
+    if (!editForm.fullName || !editForm.fullName.trim()) {
+      setToast({ message: 'Nama lengkap wajib diisi', type: 'warning' });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Complete onboarding or update profile
-      const updatedUser = {
-        ...currentUser,
+      const profileData = {
         fullName: editForm.fullName.trim(),
         phoneNumber: editForm.phoneNumber.trim(),
         farmName: editForm.farmName.trim(),
         farmAddress: editForm.farmAddress.trim(),
       };
-      // Persist to local storage and state
-      api.auth.setUser(updatedUser);
-      setCurrentUser(updatedUser);
+
+      const updatedUser = await api.auth.updateProfile(profileData);
+      if (typeof setCurrentUser === 'function') {
+        setCurrentUser(updatedUser);
+      }
       setShowEditModal(false);
       setToast({ message: '✓ Informasi profil berhasil diperbarui', type: 'success' });
     } catch (err) {
       console.error(err);
-      setToast({ message: 'Gagal memperbarui profil', type: 'error' });
+      setToast({ message: err?.getUserMessage?.() || err?.message || 'Gagal memperbarui profil', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -3184,20 +3362,16 @@ const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, devices, onL
 
     setLoading(true);
     try {
-      await api.auth.completeOnboarding({
-        currentPassword: passwordForm.currentPassword,
+      await api.auth.changePassword({
+        oldPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
-        fullName: currentUser?.fullName || 'Petani',
-        phoneNumber: currentUser?.phoneNumber || '',
-        farmName: currentUser?.farmName || '',
-        farmAddress: currentUser?.farmAddress || '',
       });
       setShowPasswordModal(false);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setToast({ message: '✓ Kata sandi berhasil diperbarui', type: 'success' });
     } catch (err) {
       console.error(err);
-      setToast({ message: err.getUserMessage?.() || err.message || 'Gagal mengubah kata sandi', type: 'error' });
+      setToast({ message: err?.getUserMessage?.() || err?.message || 'Gagal mengubah kata sandi', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -3231,7 +3405,11 @@ const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, devices, onL
                 <div className="profile-card-info">
                   <h3>{currentUser?.fullName || currentUser?.username || 'Petani Jamur'}</h3>
                   <p className="text-sage font-semibold">
-                    {currentUser?.role === 'admin' ? 'Administrator Sistem' : 'Petani Kumbung Jamur'}
+                    {currentUser?.role?.toUpperCase() === 'ADMIN' 
+                      ? 'Administrator Wilayah ShroomSync' 
+                      : currentUser?.role?.toUpperCase() === 'TECHNICIAN'
+                      ? 'Teknisi Lapangan ShroomSync'
+                      : 'Petani Kumbung Jamur'}
                   </p>
                   {currentUser?.farmName && (
                     <p className="text-muted" style={{ fontSize: '0.85rem', marginTop: '2px' }}>
@@ -3260,10 +3438,22 @@ const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, devices, onL
                     <span style={{ lineHeight: '1.4' }}>{currentUser.farmAddress}</span>
                   </div>
                 )}
-                <div className="profile-detail-item">
-                  <CircuitBoard size={18} className="text-muted" />
-                  <span>{devices?.length || currentUser?.deviceCount || 0} Kumbung Terhubung</span>
-                </div>
+                {currentUser?.role?.toUpperCase() === 'TECHNICIAN' ? (
+                  <div className="profile-detail-item">
+                    <Wrench size={18} className="text-muted" />
+                    <span>Divisi Hardware & Firmware SupaKu</span>
+                  </div>
+                ) : currentUser?.role?.toUpperCase() === 'ADMIN' ? (
+                  <div className="profile-detail-item">
+                    <Shield size={18} className="text-muted" />
+                    <span>Otoritas Manajemen Wilayah ShroomSync</span>
+                  </div>
+                ) : (
+                  <div className="profile-detail-item">
+                    <CircuitBoard size={18} className="text-muted" />
+                    <span>{devices?.length || currentUser?.deviceCount || 0} SupaKu Terhubung</span>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
@@ -4499,18 +4689,70 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, update
 
 // --- Main App Component ---
 function App() {
-  const [activePage, setActivePage] = useState('dashboard');
+  const [currentUser, setCurrentUser] = useState(() => api.auth.getUser());
+  const [activePage, setActivePage] = useState(() => resolveInitialPage());
+
+  const handleSetActivePage = useCallback((newPage) => {
+    const storedUser = api.auth.getUser();
+    const role = (storedUser?.role || 'FARMER').toUpperCase();
+
+    let target = newPage;
+    if (role === 'ADMIN') {
+      if (!ADMIN_PAGES.includes(newPage)) target = 'admin';
+    } else if (role === 'TECHNICIAN') {
+      if (!TECHNICIAN_PAGES.includes(newPage)) target = 'technician';
+    } else {
+      if (newPage === 'admin' || newPage === 'technician' || !FARMER_PAGES.includes(newPage)) {
+        target = 'dashboard';
+      }
+    }
+
+    setActivePage(target);
+    try {
+      localStorage.setItem('shroomsync_active_page', target);
+      if (typeof window !== 'undefined') {
+        const targetPath = (target === 'dashboard' || (role === 'ADMIN' && target === 'admin') || (role === 'TECHNICIAN' && target === 'technician'))
+          ? (target === 'dashboard' ? '/' : `/${target}`)
+          : `/${target}`;
+        if (window.location.pathname !== targetPath) {
+          window.history.replaceState({ page: target }, '', targetPath);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Listen for browser Back/Forward (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const pageFromUrl = resolveInitialPage();
+      if (pageFromUrl) {
+        setActivePage(pageFromUrl);
+        try {
+          localStorage.setItem('shroomsync_active_page', pageFromUrl);
+        } catch {
+          // ignore storage access error
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const [connectionNotice, setConnectionNotice] = useState(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [liveSensorEvent, setLiveSensorEvent] = useState(null);
   const [liveHistoryEvent, setLiveHistoryEvent] = useState(null);
 
   // Authentication State
-  const [currentUser, setCurrentUser] = useState(() => api.auth.getUser());
   const [isAuthenticated, setIsAuthenticated] = useState(() => api.auth.isAuthenticated());
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [viewMode, setViewMode] = useState(() => {
+    if (isMobileApp()) return api.auth.isAuthenticated() ? 'app' : 'login';
     return api.auth.isAuthenticated() ? 'app' : 'landing';
   });
 
@@ -4546,6 +4788,7 @@ function App() {
         if (!cancelled) {
           setIsAuthenticated(false);
           setIsAuthChecking(false);
+          setViewMode(isMobileApp() ? 'login' : 'landing');
         }
         return;
       }
@@ -4555,8 +4798,44 @@ function App() {
         if (!cancelled) {
           setCurrentUser(profile);
           setIsAuthenticated(true);
-          if (profile.mustSetupProfile) {
+          setViewMode('app');
+          if (profile.mustSetupProfile || profile.nextStep === 'complete_profile') {
             setShowOnboarding(true);
+          }
+
+          const currentRole = profile?.role?.toUpperCase();
+          if (isMobileApp() && currentRole !== 'FARMER') {
+            console.warn('[App] Non-farmer session blocked on mobile app:', currentRole);
+            api.auth.logout();
+            if (!cancelled) {
+              setIsAuthenticated(false);
+              setCurrentUser(null);
+              setViewMode('login');
+              setConnectionNotice('Aplikasi mobile ShroomSync dikhususkan untuk Petani. Administrator dan Teknisi dapat menggunakan portal web.');
+            }
+            return;
+          }
+
+          const currentTarget = resolveInitialPage();
+
+          if (currentRole === 'ADMIN') {
+            if (currentTarget === 'profil') {
+              handleSetActivePage('profil');
+            } else {
+              handleSetActivePage('admin');
+            }
+          } else if (currentRole === 'TECHNICIAN') {
+            if (currentTarget === 'profil') {
+              handleSetActivePage('profil');
+            } else {
+              handleSetActivePage('technician');
+            }
+          } else {
+            if (currentTarget && currentTarget !== 'admin' && currentTarget !== 'technician') {
+              handleSetActivePage(currentTarget);
+            } else {
+              handleSetActivePage('dashboard');
+            }
           }
         }
       } catch (err) {
@@ -4566,6 +4845,7 @@ function App() {
           if (!cancelled) {
             setIsAuthenticated(false);
             setCurrentUser(null);
+            setViewMode(isMobileApp() ? 'login' : 'landing');
           }
         }
       } finally {
@@ -4576,9 +4856,10 @@ function App() {
     verifyAuth();
 
     const handleUnauthorized = () => {
+      api.auth.logout();
       setIsAuthenticated(false);
       setCurrentUser(null);
-      setViewMode('landing');
+      setViewMode(isMobileApp() ? 'login' : 'landing');
     };
 
     window.addEventListener('shroomsync:unauthorized', handleUnauthorized);
@@ -4586,19 +4867,46 @@ function App() {
       cancelled = true;
       window.removeEventListener('shroomsync:unauthorized', handleUnauthorized);
     };
-  }, []);
+  }, [handleSetActivePage]);
+
+  // Inisialisasi Firebase Push Notification di perangkat Mobile
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      pushNotificationService.init((notification) => {
+        setConnectionNotice(`🔔 ${notification.title}: ${notification.body}`);
+        window.setTimeout(() => setConnectionNotice(null), 6000);
+      });
+    }
+  }, [isAuthenticated, currentUser]);
 
   const handleLoginSuccess = (loginResponse) => {
+    const loginRole = loginResponse?.user?.role?.toUpperCase();
+    if (isMobileApp() && loginRole !== 'FARMER') {
+      api.auth.logout();
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setViewMode('login');
+      return;
+    }
+
     setCurrentUser(loginResponse.user);
     setIsAuthenticated(true);
     setViewMode('app');
-    if (loginResponse.mustSetupProfile) {
+    if (loginResponse.mustSetupProfile || loginResponse.nextStep === 'complete_profile') {
       setShowOnboarding(true);
     } else {
       setShowOnboarding(false);
     }
+    if (loginRole === 'TECHNICIAN') {
+      handleSetActivePage('technician');
+    } else if (loginRole === 'ADMIN') {
+      handleSetActivePage('admin');
+    } else {
+      handleSetActivePage('dashboard');
+    }
     refetch();
   };
+
 
   const handleOnboardingComplete = (onboardingResponse) => {
     const updatedUser = onboardingResponse?.user 
@@ -4609,13 +4917,25 @@ function App() {
     refetch();
   };
 
+  const handleRequestLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    handleLogout();
+  };
+
   const handleLogout = () => {
     api.auth.logout();
     setIsAuthenticated(false);
     setCurrentUser(null);
     setShowOnboarding(false);
-    setActivePage('dashboard');
-    setViewMode('landing');
+    handleSetActivePage('dashboard');
+    setViewMode(isMobileApp() ? 'login' : 'landing');
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', '/');
+    }
   };
 
   // Auto-select first device
@@ -4634,18 +4954,38 @@ function App() {
     return () => window.clearTimeout(updateId);
   }, [devices]);
 
-  const connectionError = !devicesLoading && devicesError && !socketConnected
+  const connectionError = connectionNotice || (!devicesLoading && devicesError && !socketConnected
     ? 'Koneksi API bermasalah. Menampilkan data terakhir yang berhasil dibaca.'
-    : null;
+    : null);
 
   const selectedDevice = devices.find(d => (d.deviceId || d.id) === selectedDeviceId);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
 
-  // If user is not authenticated and auth check finished
-  if (!isAuthenticated && !isAuthChecking) {
-    if (viewMode === 'landing') {
+  // If auth is still checking on initial load, show a smooth loader
+  if (isAuthChecking) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#0f1712',
+        color: '#86efac',
+        fontFamily: "'Plus Jakarta Sans', sans-serif"
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="loading-spinner" style={{ margin: '0 auto 16px' }} />
+          <p style={{ margin: 0, fontSize: '0.9rem', color: '#9cb1a2' }}>Memuat ShroomSync...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is not authenticated
+  if (!isAuthenticated) {
+    if (!isMobileApp() && viewMode === 'landing') {
       return (
         <LandingPage 
           onGoToLogin={() => setViewMode('login')}
@@ -4658,11 +4998,7 @@ function App() {
     return (
       <LoginScreen 
         onLoginSuccess={handleLoginSuccess}
-        onGuestContinue={() => {
-          setIsAuthenticated(true);
-          setViewMode('app');
-        }}
-        onBackToLanding={() => setViewMode('landing')}
+        onBackToLanding={!isMobileApp() ? () => setViewMode('landing') : undefined}
       />
     );
   }
@@ -4672,14 +5008,17 @@ function App() {
     return (
       <LandingPage 
         onGoToLogin={() => setViewMode('app')}
-        onGoToDashboard={() => setViewMode('app')}
+        onGoToDashboard={() => {
+          setViewMode('app');
+          handleSetActivePage('dashboard');
+        }}
         isAuthenticated={true}
       />
     );
   }
 
   // If user must setup profile (new farmer onboarding), show dedicated full-page OnboardingScreen
-  if (showOnboarding || currentUser?.mustSetupProfile) {
+  if (showOnboarding || currentUser?.mustSetupProfile || currentUser?.nextStep === 'complete_profile') {
     return (
       <OnboardingScreen 
         user={currentUser} 
@@ -4689,16 +5028,17 @@ function App() {
     );
   }
 
+  const userRole = (currentUser?.role || api.auth.getUser()?.role || 'FARMER').toUpperCase();
+
   return (
     <div className="app-container">
       <Sidebar 
         activePage={activePage} 
-        setActivePage={setActivePage} 
+        setActivePage={handleSetActivePage} 
         isOpen={sidebarOpen}
         onClose={closeSidebar}
         currentUser={currentUser}
-        onLogout={handleLogout}
-        onOpenLanding={() => setViewMode('landing')}
+        onLogout={handleRequestLogout}
       />
       <main className="main-content">
         {connectionError && (
@@ -4706,15 +5046,60 @@ function App() {
             {connectionError}
           </div>
         )}
-        {activePage === 'dashboard' && <DashboardContent devices={devices} setSelectedDeviceId={setSelectedDeviceId} setActivePage={setActivePage} onMenuToggle={toggleSidebar} liveSensorEvent={liveSensorEvent} liveHistoryEvent={liveHistoryEvent} />}
-        {activePage === 'kumbung' && <KumbungContent setActivePage={setActivePage} devices={devices} refetchDevices={refetch} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} onMenuToggle={toggleSidebar} />}
-        {activePage === 'monitoring' && <MonitoringContent setActivePage={setActivePage} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} selectedDevice={selectedDevice} onMenuToggle={toggleSidebar} liveSensorEvent={liveSensorEvent} liveHistoryEvent={liveHistoryEvent} />}
-        {activePage === 'siklus' && <SiklusPanenContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} selectedDevice={selectedDevice} onMenuToggle={toggleSidebar} />}
-        {activePage === 'kontrol' && <KontrolContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} updateDevice={updateDevice} onMenuToggle={toggleSidebar} />}
-        {activePage === 'analitik' && <AnalitikContent onMenuToggle={toggleSidebar} />}
-        {activePage === 'notifikasi' && <NotifikasiContent onMenuToggle={toggleSidebar} />}
-        {activePage === 'profil' && <ProfilContent onMenuToggle={toggleSidebar} currentUser={currentUser} setCurrentUser={setCurrentUser} devices={devices} onLogout={handleLogout} />}
+
+        {/* 1. Portal Khusus Admin: Mandiri & Tidak bisa mengakses dashboard farmer */}
+        {userRole === 'ADMIN' && (
+          activePage === 'profil' ? (
+            <ProfilContent onMenuToggle={toggleSidebar} currentUser={currentUser} setCurrentUser={setCurrentUser} devices={devices} onLogout={handleRequestLogout} />
+          ) : (
+            <AdminDashboard onMenuToggle={toggleSidebar} currentUser={currentUser} />
+          )
+        )}
+
+        {/* 2. Portal Khusus Teknisi: Mandiri & Tidak bisa mengakses dashboard farmer */}
+        {userRole === 'TECHNICIAN' && (
+          activePage === 'profil' ? (
+            <ProfilContent onMenuToggle={toggleSidebar} currentUser={currentUser} setCurrentUser={setCurrentUser} devices={devices} onLogout={handleRequestLogout} />
+          ) : (
+            <TechnicianDashboard onMenuToggle={toggleSidebar} currentUser={currentUser} />
+          )
+        )}
+
+        {/* 3. Portal Khusus Petani: Dashboard Farmer */}
+        {userRole !== 'ADMIN' && userRole !== 'TECHNICIAN' && (
+          <>
+            {activePage === 'dashboard' && <DashboardContent devices={devices} setSelectedDeviceId={setSelectedDeviceId} setActivePage={handleSetActivePage} onMenuToggle={toggleSidebar} liveSensorEvent={liveSensorEvent} liveHistoryEvent={liveHistoryEvent} />}
+            {activePage === 'kumbung' && <KumbungContent setActivePage={handleSetActivePage} devices={devices} refetchDevices={refetch} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} onMenuToggle={toggleSidebar} />}
+            {activePage === 'monitoring' && <MonitoringContent setActivePage={handleSetActivePage} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} selectedDevice={selectedDevice} onMenuToggle={toggleSidebar} liveSensorEvent={liveSensorEvent} liveHistoryEvent={liveHistoryEvent} />}
+            {activePage === 'siklus' && <SiklusPanenContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} selectedDevice={selectedDevice} onMenuToggle={toggleSidebar} />}
+            {activePage === 'kontrol' && <KontrolContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} updateDevice={updateDevice} onMenuToggle={toggleSidebar} />}
+            {activePage === 'notifikasi' && <NotifikasiContent onMenuToggle={toggleSidebar} />}
+            {activePage === 'profil' && <ProfilContent onMenuToggle={toggleSidebar} currentUser={currentUser} setCurrentUser={setCurrentUser} devices={devices} onLogout={handleRequestLogout} />}
+          </>
+        )}
       </main>
+
+      {/* Modal Konfirmasi Logout Petani */}
+      <ConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+        title="Keluar dari Akun"
+        message="Apakah Anda yakin ingin keluar dari akun ShroomSync? Anda akan diminta memasukkan kata sandi saat masuk kembali."
+        itemDetails={
+          currentUser
+            ? {
+                label: 'Akun Petani Aktif',
+                value: currentUser.farmName || currentUser.fullName || currentUser.username || 'Petani Kumbung',
+                subValue: currentUser.phoneNumber || currentUser.email || 'Terdaftar',
+              }
+            : null
+        }
+        type="warning"
+        confirmText="Ya, Keluar"
+        cancelText="Tetap Masuk"
+        dangerNote=""
+      />
     </div>
   );
 }

@@ -8,6 +8,29 @@ const unwrap = (payload) => (
   payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
 );
 
+const OFFLINE_THRESHOLD_MS = 2 * 60 * 1000;
+
+export const isDeviceOnline = (dev, maxInactiveMs = OFFLINE_THRESHOLD_MS) => {
+  if (!dev) return false;
+  if (dev.status === 'OFFLINE' || dev.status === 'SUSPENDED') return false;
+  if (!dev.lastSeenAt) return false;
+  const lastSeenMs = new Date(dev.lastSeenAt).getTime();
+  if (Number.isNaN(lastSeenMs)) return false;
+  return (Date.now() - lastSeenMs) <= maxInactiveMs;
+};
+
+const normalizeDevice = (dev) => {
+  if (!dev || typeof dev !== 'object') return dev;
+  const online = isDeviceOnline(dev);
+  return {
+    ...dev,
+    isOnline: online,
+    status: dev.status === 'READY' ? 'READY' : (dev.status === 'SUSPENDED' ? 'SUSPENDED' : (online ? 'ACTIVE' : 'OFFLINE')),
+    rssiDbm: dev.rssiDbm != null ? dev.rssiDbm : (online ? -65 : null),
+    uptimeMs: dev.uptimeMs != null ? dev.uptimeMs : (online ? 3600000 : null),
+  };
+};
+
 /**
  * Fetch and keep devices fresh through REST polling only.
  *
@@ -29,9 +52,10 @@ function useDevices(options = {}) {
       if (!silent) setLoading(true);
       const result = await DeviceService.getAllDevices();
       const data = unwrap(result);
-      setDevices(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data.map(normalizeDevice) : [];
+      setDevices(list);
       setError(null);
-      return data;
+      return list;
     } catch (err) {
       const errorMsg = err.getUserMessage?.() || err.message;
       setError(errorMsg);
@@ -55,14 +79,14 @@ function useDevices(options = {}) {
         if (deviceId !== updatedDeviceId) return device;
 
         found = true;
-        return {
+        return normalizeDevice({
           ...device,
           ...updatedDevice,
           config: updatedDevice.config || device.config || null,
-        };
+        });
       });
 
-      return found ? nextDevices : [updatedDevice, ...currentDevices];
+      return found ? nextDevices : [normalizeDevice(updatedDevice), ...currentDevices];
     });
   }, []);
 

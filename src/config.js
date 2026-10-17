@@ -15,9 +15,7 @@ const API_CONFIG = {
 
 const envName = import.meta.env.VITE_APP_ENV || 'development';
 const envConfig = API_CONFIG[envName] || API_CONFIG.development;
-const rawBaseURL = envName === 'development'
-  ? envConfig.baseURL
-  : (import.meta.env.VITE_API_BASE_URL || envConfig.baseURL);
+const rawBaseURL = import.meta.env.VITE_API_BASE_URL || envConfig.baseURL;
 
 const resolvedBaseURL = (() => {
   if (!rawBaseURL) return '/api/v1';
@@ -26,6 +24,23 @@ const resolvedBaseURL = (() => {
     return `${clean}/api/v1`;
   }
   return clean;
+})();
+
+const resolvedWsURL = (() => {
+  const customWs = import.meta.env.VITE_WS_URL || envConfig.wsURL;
+  if (customWs) return customWs.replace(/\/+$/, '');
+  if (/^https?:\/\//i.test(resolvedBaseURL)) {
+    try {
+      const url = new URL(resolvedBaseURL);
+      return url.origin;
+    } catch {
+      return '';
+    }
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return 'http://localhost:3000';
 })();
 
 const skipTunnelWarning = import.meta.env.VITE_SKIP_TUNNEL_WARNING === 'true'
@@ -40,9 +55,9 @@ const config = {
   ...envConfig,
   env: envName,
   baseURL: resolvedBaseURL,
-  wsURL: '',
+  wsURL: resolvedWsURL,
   timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || 10000),
-  enableSocket: false,
+  enableSocket: import.meta.env.VITE_ENABLE_SOCKET === 'true',
   skipTunnelWarning,
   polling: {
     devicesMs: toPositiveNumber(import.meta.env.VITE_DEVICES_POLL_MS, 5000),

@@ -5,6 +5,9 @@ import DeviceService from './DeviceService';
 import TelemetryService from './TelemetryService';
 import OTAService from './OTAService';
 import CycleService from './CycleService';
+import SocketService from './socket-service';
+import TechnicianService from './TechnicianService';
+import AdminService from './AdminService';
 
 const healthClient = new APIClient(config.baseURL.replace(/\/v1\/?$/, ''));
 
@@ -17,7 +20,16 @@ const unwrap = (payload, fallback = null) => {
 
 const asArray = (payload) => {
   const data = unwrap(payload, []);
-  return Array.isArray(data) ? data : [];
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') {
+    if (Array.isArray(data.records)) return data.records;
+    if (Array.isArray(data.items)) return data.items;
+    if (Array.isArray(data.cycles)) return data.cycles;
+    if (Array.isArray(data.harvests)) return data.harvests;
+    if (Array.isArray(data.devices)) return data.devices;
+    if (Array.isArray(data.data)) return data.data;
+  }
+  return [];
 };
 
 const normalizeDeviceDetail = (payload) => {
@@ -64,8 +76,11 @@ const api = {
     registerFarmer: (data) => AuthService.registerFarmer(data),
     logout: () => AuthService.logout(),
     getUser: () => AuthService.getUser(),
+    setUser: (user) => AuthService.setUser(user),
     getToken: () => AuthService.getToken(),
     isAuthenticated: () => AuthService.isAuthenticated(),
+    updateProfile: (data) => AuthService.updateProfile(data),
+    changePassword: (data) => AuthService.changePassword(data),
   },
 
   devices: {
@@ -92,7 +107,15 @@ const api = {
       apiClient.get(`/devices/${deviceId}/cycles/${cycleId}`).then((payload) => unwrap(payload))
     ),
     create: (deviceId, data) => CycleService.createCycle(deviceId, data).then((payload) => unwrap(payload)),
-    summary: (deviceId, cycleId) => CycleService.getSummary(deviceId, cycleId).then((payload) => unwrap(payload)),
+    summary: (deviceId, cycleId) => (
+      CycleService.getSummary(deviceId, cycleId).then((payload) => {
+        const data = unwrap(payload);
+        if (data && typeof data === 'object' && data.summary && typeof data.summary === 'object') {
+          return { ...data, ...data.summary };
+        }
+        return data;
+      })
+    ),
     complete: (deviceId, cycleId, data) => CycleService.completeCycle(deviceId, cycleId, data).then((payload) => unwrap(payload)),
     harvests: (deviceId, cycleId, params = { limit: 100, offset: 0 }) => (
       CycleService.getHarvests(deviceId, cycleId, params).then(asArray)
@@ -178,7 +201,22 @@ const api = {
     },
     getLogs: (id, limit, offset) => OTAService.getUpdateLogs(id, limit, offset).then(asArray),
   },
+
+  technician: TechnicianService,
+  admin: AdminService,
+  socket: SocketService,
 };
 
 export default api;
-export { APIError };
+export {
+  APIClient,
+  APIError,
+  AuthService,
+  DeviceService,
+  TelemetryService,
+  OTAService,
+  CycleService,
+  SocketService,
+  TechnicianService,
+  AdminService,
+};

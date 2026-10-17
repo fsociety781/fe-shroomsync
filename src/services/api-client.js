@@ -13,28 +13,26 @@ export class APIError extends Error {
   }
 
   getUserMessage() {
+    const specificMessage = this.payload?.message || this.message;
     switch (this.statusCode) {
       case 400:
-        return 'Input tidak valid. Periksa kembali data yang dikirim.';
+        return specificMessage || 'Input tidak valid. Periksa kembali data yang dikirim.';
       case 401:
-        return 'Sesi login tidak valid atau telah berakhir. Silakan login kembali.';
+        return specificMessage || 'Sesi login tidak valid atau telah berakhir. Silakan login kembali.';
       case 403:
-        return 'Akses ditolak. Anda tidak memiliki izin untuk tindakan ini.';
+        return specificMessage || 'Akses ditolak. Anda tidak memiliki izin untuk tindakan ini.';
       case 404:
-        return 'Data tidak ditemukan.';
-        return 'Data atau perangkat tidak ditemukan.';
+        return specificMessage || 'Data atau perangkat tidak ditemukan.';
       case 409:
-        return 'Data sudah ada atau sedang konflik.';
-        return this.message || 'Data sudah ada atau sedang konflik.';
+        return specificMessage || 'Data sudah ada atau sedang konflik.';
       case 429:
         return this.retryAfter
           ? `Terlalu banyak permintaan. Coba lagi setelah ${new Date(this.retryAfter).toLocaleTimeString('id-ID')}.`
-          : 'Terlalu banyak permintaan. Coba lagi sebentar.';
+          : (specificMessage || 'Terlalu banyak permintaan. Coba lagi sebentar.');
       case 500:
-        return 'Server sedang bermasalah.';
-        return 'Server sedang bermasalah. Silakan coba beberapa saat lagi.';
+        return specificMessage || 'Server sedang bermasalah. Silakan coba beberapa saat lagi.';
       default:
-        return this.message || 'Terjadi kesalahan jaringan.';
+        return specificMessage || 'Terjadi kesalahan jaringan.';
     }
   }
 
@@ -116,21 +114,22 @@ class APIClient {
       }
     }
 
+    const requestTimeout = options.timeout ?? this.timeout;
     const response = await CapacitorHttp.request({
       url: this.buildURL(endpoint),
       method: options.method || 'GET',
       headers,
       data,
       responseType: 'json',
-      connectTimeout: this.timeout,
-      readTimeout: this.timeout,
+      connectTimeout: requestTimeout,
+      readTimeout: requestTimeout,
     });
 
     const payload = response.status === 204
       ? null
       : this.parseNativePayload(response.data, response.headers);
 
-    if (response.status === 401) {
+    if (response.status === 401 && !endpoint.includes('/auth/login')) {
       notifyUnauthorized();
     }
 
@@ -143,8 +142,9 @@ class APIClient {
   }
 
   async fetchRequest(endpoint, options, headers) {
+    const requestTimeout = options.timeout ?? this.timeout;
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), this.timeout);
+    const timeoutId = window.setTimeout(() => controller.abort(), requestTimeout);
 
     let body = options.body;
     if (body && !(body instanceof FormData) && typeof body !== 'string') {
@@ -166,7 +166,7 @@ class APIClient {
           ? await response.json().catch(() => ({}))
           : await response.text();
 
-      if (response.status === 401) {
+      if (response.status === 401 && !endpoint.includes('/auth/login')) {
         notifyUnauthorized();
       }
 
@@ -189,7 +189,7 @@ class APIClient {
   }
 
   async executeRequest(endpoint, options, headers) {
-    if (this.isNativeHttp()) {
+    if (this.isNativeHttp() && !(options.body instanceof FormData)) {
       return await this.nativeRequest(endpoint, options, headers);
     }
     return await this.fetchRequest(endpoint, options, headers);
@@ -206,6 +206,14 @@ class APIClient {
       ...authHeaders,
       ...options.headers,
     };
+
+    // If sending FormData (multipart/form-data), let the browser/fetch client
+    // automatically generate the multipart boundary. Explicit 'application/json'
+    // will cause the backend Express JSON parser to throw INVALID_JSON syntax error.
+    if (options.body instanceof FormData) {
+      delete headers['Content-Type'];
+      delete headers['content-type'];
+    }
 
     try {
       return await this.executeRequest(endpoint, options, headers);

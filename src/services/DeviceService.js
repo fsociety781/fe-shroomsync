@@ -39,7 +39,11 @@ class DeviceService {
   async activateDevice(data) {
     const payload = typeof data === 'string'
       ? { deviceId: data.trim(), name: data.trim() }
-      : { deviceId: data?.deviceId?.trim(), name: data?.name?.trim() || data?.deviceId?.trim() };
+      : { 
+          deviceId: data?.deviceId?.trim(), 
+          name: data?.name?.trim() || data?.deviceId?.trim(),
+          ...(data?.activationCode && { activationCode: String(data.activationCode).trim() }),
+        };
 
     return apiClient.post('/devices/activate', payload);
   }
@@ -69,7 +73,6 @@ class DeviceService {
    * Mode: 1=Manual, 2=Auto, 3=Hybrid
    */
   async updateControlMode(deviceId, mode) {
-    return apiClient.post(`/devices/${deviceId}/control/mode`, { mode });
     return apiClient.post(`/devices/${deviceId}/control/mode`, { mode: Number(mode) });
   }
 
@@ -86,7 +89,6 @@ class DeviceService {
    * Timer kabut: { Menit, Detik }
    */
   async updateTimer(deviceId, minute, second) {
-    return apiClient.post(`/devices/${deviceId}/timer`, { Menit: minute, Detik: second });
     return apiClient.post(`/devices/${deviceId}/timer`, { Menit: Number(minute), Detik: Number(second) });
   }
 
@@ -95,15 +97,18 @@ class DeviceService {
    * Timer lantai: { FlrMenit, FlrDetik }
    */
   async updateFloorTimer(deviceId, minute, second) {
-    return apiClient.post(`/devices/${deviceId}/timer/floor`, { FlrMenit: minute, FlrDetik: second });
     return apiClient.post(`/devices/${deviceId}/timer/floor`, { FlrMenit: Number(minute), FlrDetik: Number(second) });
   }
 
   /**
    * POST /api/v1/devices/:deviceId/schedule
    * Jadwal kabut: { jam1, menit1, jam2, menit2, jam3, menit3 }
+   * Mendukung opsi floorSchedule: { FlrJam, FlrMenit }
    */
-  async updateSchedule(deviceId, schedule = {}) {
+  async updateSchedule(deviceId, schedule = {}, floorSchedule = null) {
+    if (floorSchedule && typeof floorSchedule === 'object' && Object.keys(floorSchedule).length > 0) {
+      await apiClient.post(`/devices/${deviceId}/schedule/floor`, compactObject(floorSchedule));
+    }
     return apiClient.post(`/devices/${deviceId}/schedule`, compactObject(schedule));
   }
 
@@ -120,7 +125,6 @@ class DeviceService {
    * Mode frekuensi jadwal: 1, 2, atau 3 kali sehari
    */
   async updateScheduleMode(deviceId, mode) {
-    return apiClient.post(`/devices/${deviceId}/schedule/mode`, { mode });
     return apiClient.post(`/devices/${deviceId}/schedule/mode`, { mode: Number(mode) });
   }
 
@@ -129,7 +133,6 @@ class DeviceService {
    * Kontrol manual pompa kabut
    */
   async controlPump(deviceId, on) {
-    return apiClient.post(`/devices/${deviceId}/actuator/pump`, { on });
     return apiClient.post(`/devices/${deviceId}/actuator/pump`, { on: Boolean(on) });
   }
 
@@ -138,7 +141,6 @@ class DeviceService {
    * Kontrol manual pompa lantai / kipas
    */
   async controlFan(deviceId, on) {
-    return apiClient.post(`/devices/${deviceId}/actuator/fan`, { on });
     return apiClient.post(`/devices/${deviceId}/actuator/fan`, { on: Boolean(on) });
   }
 

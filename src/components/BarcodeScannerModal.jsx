@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Html5Qrcode } from 'html5-qrcode';
 import { 
-  Camera, 
-  CameraOff, 
   X, 
   Zap, 
   ZapOff, 
@@ -18,35 +16,46 @@ import {
  * Smart parser untuk barcode / QR perangkat ShroomSync:
  * Mendukung JSON payload, URL query parameter, format prefix, maupun raw Device ID.
  */
-export const parseScannedDevice = (rawText) => {
+const parseScannedDevice = (rawText) => {
   if (!rawText || typeof rawText !== 'string') {
     return { deviceId: '', name: '' };
   }
 
   const text = rawText.trim();
 
-  // 1. Format JSON: {"deviceId": "SS-001", "name": "Kumbung 1"}
+  // 1. Format JSON: {"deviceId": "SS-001", "name": "Kumbung 1", "activationCode": "ACT-..."}
   if (text.startsWith('{') && text.endsWith('}')) {
     try {
       const parsed = JSON.parse(text);
       const deviceId = parsed.deviceId || parsed.id || parsed.serialNumber || '';
       const name = parsed.name || parsed.deviceName || '';
+      const activationCode = parsed.activationCode || parsed.code || '';
       if (deviceId) {
-        return { deviceId: String(deviceId).trim(), name: String(name).trim() };
+        return { 
+          deviceId: String(deviceId).trim(), 
+          name: String(name).trim(),
+          activationCode: String(activationCode).trim(),
+        };
       }
     } catch {
       // bukan JSON valid, lanjutkan ke aturan berikutnya
     }
   }
 
-  // 2. Format URL query string: https://shroomsync.web.id/activate?deviceId=SS-001&name=Kumbung
+  // 2. Format URL query string: https://shroomsync.id/activate?deviceId=SS-001&code=ACT-123
   try {
     const urlMatch = text.match(/[?&](?:deviceId|id)=([^&]+)/i);
     if (urlMatch) {
       const deviceId = decodeURIComponent(urlMatch[1]);
       const nameMatch = text.match(/[?&]name=([^&]+)/i);
       const name = nameMatch ? decodeURIComponent(nameMatch[1]) : '';
-      return { deviceId: deviceId.trim(), name: name.trim() };
+      const codeMatch = text.match(/[?&](?:activationCode|code)=([^&]+)/i);
+      const activationCode = codeMatch ? decodeURIComponent(codeMatch[1]) : '';
+      return { 
+        deviceId: deviceId.trim(), 
+        name: name.trim(),
+        activationCode: activationCode.trim(),
+      };
     }
   } catch {
     // abaikan error regex URL
@@ -237,6 +246,7 @@ const BarcodeScannerModal = ({ isOpen, onClose, onScanSuccess }) => {
     } else {
       stopScannerSafe();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, facingMode]);
 
   if (!isOpen) return null;

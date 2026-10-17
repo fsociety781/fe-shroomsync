@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  ShieldCheck, 
   Lock, 
   User, 
   Phone, 
   Building, 
   MapPin, 
-  CheckCircle, 
   AlertCircle, 
   Sparkles,
   ArrowRight,
   LogOut,
   Eye,
-  EyeOff,
-  Sprout
+  EyeOff
 } from 'lucide-react';
 import api, { APIError } from '../services/api';
 

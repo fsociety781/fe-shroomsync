@@ -1,30 +1,19 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Sprout, 
   Activity, 
   Sliders, 
   ScanLine, 
-  Sparkles, 
   ArrowRight, 
   CheckCircle2, 
   XCircle, 
-  Wifi, 
-  ShieldCheck, 
-  Cpu, 
   Cloud, 
   Smartphone, 
   ChevronDown, 
   Droplets, 
   Thermometer, 
-  Wind, 
-  TrendingUp, 
   CalendarDays, 
-  HelpCircle,
-  ExternalLink,
   Layers,
-  BarChart3,
-  Flame,
   RadioTower
 } from 'lucide-react';
 import './LandingPage.css';
@@ -33,7 +22,7 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
   // State Simulasi Iklim Mikro Interaktif di Hero
   const [simTemp, setSimTemp] = useState(25.5);
   const [simHumid, setSimHumid] = useState(86);
-  const [manualPumpOverride, setManualPumpOverride] = useState(null);
+  const [manualPumpOverride] = useState(null);
 
   // State Kalkulator ROI Panen
   const [baglogCount, setBaglogCount] = useState(2500);
@@ -236,8 +225,8 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
                     <RadioTower size={20} />
                   </div>
                   <div>
-                    <h3>Simulasi Iklim Kumbung</h3>
-                    <span>SupaKu Telemetry Live Preview</span>
+                    <h3>Telemetri Iklim Kumbung</h3>
+                    <span>SupaKu IoT Real-Time Monitor</span>
                   </div>
                 </div>
                 <div className="lp-sim-live-badge">
@@ -255,7 +244,7 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
                   </div>
                   <div className="lp-sim-gauge-val">{simTemp.toFixed(1)}°C</div>
                   <div className="lp-sim-gauge-status" style={{ color: simTemp > 28 ? '#f87171' : '#4ade80' }}>
-                    {simTemp > 28 ? '▲ Suhu Terlalu Panas' : '✓ Rentang Sejuk Ideal'}
+                    {simTemp > 28 ? 'Perhatian: Suhu Terlalu Panas' : 'Optimal: Rentang Sejuk Ideal'}
                   </div>
                 </div>
 
@@ -266,7 +255,7 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
                   </div>
                   <div className="lp-sim-gauge-val">{simHumid}%</div>
                   <div className="lp-sim-gauge-status" style={{ color: simHumid < 80 ? '#f87171' : '#4ade80' }}>
-                    {simHumid < 80 ? '▼ Kurang Lembab' : '✓ Kelembaban Sangat Baik'}
+                    {simHumid < 80 ? 'Perhatian: Kurang Lembab' : 'Optimal: Kelembaban Sangat Baik'}
                   </div>
                 </div>
               </div>
@@ -354,19 +343,19 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
             </div>
             <ul className="lp-comparison-list">
               <li className="lp-comparison-item">
-                <span>❌</span>
+                <XCircle size={18} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Penyemprotan Manual Kasar:</strong> Petani menyiram memakai selang secara manual yang sering membuat baglog terlalu basah atau busuk.</div>
               </li>
               <li className="lp-comparison-item">
-                <span>❌</span>
+                <XCircle size={18} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Kondisi Malam Hari Tak Terpantau:</strong> Suhu dingin ekstrem atau kering dini hari tidak tertangani karena petani sedang tidur.</div>
               </li>
               <li className="lp-comparison-item">
-                <span>❌</span>
+                <XCircle size={18} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Catatan Panen di Kertas:</strong> Buku catatan mudah basah, hilang, dan menyulitkan evaluasi efisiensi bobot panen (BER).</div>
               </li>
               <li className="lp-comparison-item">
-                <span>❌</span>
+                <XCircle size={18} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Petani Terikat di Lokasi:</strong> Tidak bisa bepergian jauh karena harus selalu memeriksa kelembaban kumbung.</div>
               </li>
             </ul>
@@ -385,19 +374,19 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
             </div>
             <ul className="lp-comparison-list">
               <li className="lp-comparison-item">
-                <span>✓</span>
+                <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Otomasi Kabut Mikro Presisi:</strong> Nozel kabut menyala otomatis dalam hitungan detik saat kelembaban turun di bawah 80%.</div>
               </li>
               <li className="lp-comparison-item">
-                <span>✓</span>
+                <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Monitoring 24/7 Tanpa Henti:</strong> Sensor membaca suhu & kelembaban setiap waktu dan memicu exhaust fan saat udara panas.</div>
               </li>
               <li className="lp-comparison-item">
-                <span>✓</span>
+                <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Rekap Panen & Batch Digital:</strong> Pelacakan fase baglog dari inokulasi hingga flushes panen dengan grafik analitik.</div>
               </li>
               <li className="lp-comparison-item">
-                <span>✓</span>
+                <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Kendali Jarak Jauh via Smartphone:</strong> Pantau kondisi kumbung dan nyalakan pompa dari mana saja melalui HP Android Anda.</div>
               </li>
             </ul>

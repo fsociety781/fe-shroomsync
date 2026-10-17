@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "67662663839",
+    "project_id": "shroomsync-1d74a",
+    "storage_bucket": "shroomsync-1d74a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:67662663839:android:cc59a49db17d20c89d92aa",
+        "android_client_info": {
+          "package_name": "com.shroomsync.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3QC7NkVln4cICBR9UQ8ictxpMQyvMLyU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

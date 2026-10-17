@@ -1,0 +1,325 @@
+/* ==========================================================================
+   ShroomSync Physical Device Barcode & QR Sticker Modal Styles
+   Optimized for on-screen preview & direct thermal label printing
+   ========================================================================== */
+
+.sticker-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.sticker-modal-dialog {
+  width: 520px;
+  max-width: 95vw;
+  max-height: 94vh;
+  overflow-y: auto;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+
+.sticker-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 14px;
+}
+
+.sticker-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(36, 94, 61, 0.12);
+  color: var(--primary, #245e3d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* --- Controls Toolbar --- */
+.sticker-controls-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+  background: var(--bg-secondary, #f8fafc);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.sticker-mode-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sticker-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-secondary, #4b5563);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sticker-tab-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.sticker-tab-btn.active {
+  background: var(--primary, #245e3d);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+.sticker-format-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sticker-select {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+/* --- Preview Area --- */
+.sticker-preview-wrapper {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 16px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+/* Physical Printable Label Box (Thermal / Synthetic Label format) */
+.supaku-physical-sticker {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-radius: 10px;
+  border: 2px solid #245e3d;
+  outline: 2px dashed #9ca3af;
+  outline-offset: -6px;
+  padding: 18px 16px 14px 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.sticker-header-band {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.sticker-brand {
+  text-align: left;
+}
+
+.sticker-brand-sub {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #245e3d;
+}
+
+.sticker-brand-title {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #111827;
+  line-height: 1.1;
+}
+
+.sticker-qc-badge {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #10b981;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* 2D QR Code Container */
+.sticker-qr-block {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 6px 0 10px 0;
+}
+
+.sticker-qr-img {
+  width: 160px;
+  height: 160px;
+  display: block;
+  border-radius: 6px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.sticker-qr-placeholder {
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* 1D Barcode Container */
+.sticker-barcode-block {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 10px 0;
+  overflow: hidden;
+}
+
+.sticker-barcode-svg {
+  max-width: 100%;
+  height: 60px;
+}
+
+/* Serial & Code Chips */
+.sticker-meta-block {
+  margin: 8px 0;
+}
+
+.sticker-serial-text {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #111827;
+  letter-spacing: 1px;
+}
+
+.sticker-activation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  padding: 3px 10px;
+  margin-top: 6px;
+  font-size: 0.76rem;
+  color: #065f46;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sticker-activation-chip strong {
+  color: #047857;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* Footer Info */
+.sticker-footer-band {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.sticker-specs {
+  font-size: 0.68rem;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.sticker-guide-text {
+  font-size: 0.64rem;
+  color: #9ca3af;
+  margin-top: 3px;
+  font-style: italic;
+}
+
+/* Modal Action Buttons */
+.sticker-modal-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sticker-modal-actions button {
+  flex: 1 1 140px;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   PRINT MEDIA STYLES - DEDICATED THERMAL / LABEL PRINTER OUTPUT
+   Hides all dashboard UI, modals, overlays, and prints ONLY the clean label
+   ========================================================================== */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .supaku-sticker-print-area,
+  .supaku-sticker-print-area * {
+    visibility: visible !important;
+  }
+
+  .supaku-sticker-print-area {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 10mm 8mm !important;
+    border: 2px solid #000000 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .sticker-modal-overlay {
+    background: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+  }
+
+  .sticker-modal-dialog {
+    box-shadow: none !important;
+    border: none !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+}

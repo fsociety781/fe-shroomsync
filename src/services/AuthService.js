@@ -68,6 +68,11 @@ class AuthService {
   logout() {
     this.clearToken();
     this.clearUser();
+    try {
+      localStorage.removeItem('shroomsync_active_page');
+    } catch {
+      // ignore
+    }
   }
 
   /**
@@ -85,20 +90,40 @@ class AuthService {
     });
 
     const data = payload?.data || payload;
-    if (data?.token) {
-      this.setToken(data.token);
+    const token = data?.token || payload?.token;
+    if (token) {
+      this.setToken(token);
     }
 
+    const existingUser = this.getUser() || {};
+    const rawUser = data?.user || (data?.role || data?.username || data?.id ? data : null) || payload?.user || {};
+    const detectedRole = (rawUser.role || data?.role || payload?.role || existingUser.role || 'FARMER').toUpperCase();
+
     const userProfile = {
-      ...(data?.user || {}),
-      mustSetupProfile: Boolean(data?.mustSetupProfile),
-      nextStep: data?.nextStep || (data?.mustSetupProfile ? 'complete_profile' : 'dashboard'),
+      ...existingUser,
+      ...rawUser,
+      role: detectedRole,
+      mustSetupProfile: Boolean(data?.mustSetupProfile ?? rawUser.mustSetupProfile ?? existingUser.mustSetupProfile),
+      nextStep: data?.nextStep || rawUser.nextStep || (data?.mustSetupProfile ? 'complete_profile' : 'dashboard'),
     };
 
     this.setUser(userProfile);
 
+    // Otomatis simpan preferensi halaman utama role di storage
+    try {
+      if (detectedRole === 'TECHNICIAN') {
+        localStorage.setItem('shroomsync_active_page', 'technician');
+      } else if (detectedRole === 'ADMIN') {
+        localStorage.setItem('shroomsync_active_page', 'admin');
+      } else {
+        localStorage.setItem('shroomsync_active_page', 'dashboard');
+      }
+    } catch {
+      // ignore
+    }
+
     return {
-      token: data?.token,
+      token,
       user: userProfile,
       mustSetupProfile: Boolean(data?.mustSetupProfile),
       nextStep: data?.nextStep,
@@ -132,8 +157,14 @@ class AuthService {
       this.setToken(data.token);
     }
 
+    const existingUser = this.getUser() || {};
+    const rawUser = data?.user || (data?.role || data?.username || data?.id ? data : null) || payload?.user || {};
+    const detectedRole = (rawUser.role || data?.role || existingUser.role || 'FARMER').toUpperCase();
+
     const userProfile = {
-      ...(data?.user || {}),
+      ...existingUser,
+      ...rawUser,
+      role: detectedRole,
       mustSetupProfile: false,
       nextStep: 'dashboard',
     };
@@ -156,11 +187,17 @@ class AuthService {
     const payload = await apiClient.get('/auth/me');
     const data = payload?.data || payload;
 
+    const existingUser = this.getUser() || {};
+    const rawUser = data?.user || (data?.role || data?.username || data?.id ? data : null) || payload?.user || {};
+    const detectedRole = (rawUser.role || data?.role || payload?.role || existingUser.role || 'FARMER').toUpperCase();
+
     const userProfile = {
-      ...(data?.user || {}),
-      deviceCount: data?.deviceCount ?? 0,
-      mustSetupProfile: Boolean(data?.mustSetupProfile),
-      nextStep: data?.nextStep || 'dashboard',
+      ...existingUser,
+      ...rawUser,
+      role: detectedRole,
+      deviceCount: data?.deviceCount ?? rawUser.deviceCount ?? existingUser.deviceCount ?? 0,
+      mustSetupProfile: Boolean(data?.mustSetupProfile ?? rawUser.mustSetupProfile ?? existingUser.mustSetupProfile),
+      nextStep: data?.nextStep || rawUser.nextStep || existingUser.nextStep || 'dashboard',
     };
 
     this.setUser(userProfile);
@@ -173,6 +210,49 @@ class AuthService {
    */
   async registerFarmer(farmerData) {
     return apiClient.post('/auth/register-farmer', farmerData);
+  }
+
+  /**
+   * PUT /api/v1/auth/profile
+   * @param {Object} profileData - { fullName, phoneNumber, farmName, farmAddress, email }
+   */
+  async updateProfile(profileData = {}) {
+    const payload = {};
+    if (profileData.fullName) payload.fullName = profileData.fullName.trim();
+    if (profileData.email) payload.email = profileData.email.trim();
+    if (profileData.phoneNumber) payload.phoneNumber = profileData.phoneNumber.trim();
+
+    let serverData = null;
+    try {
+      const response = await apiClient.put('/auth/profile', payload);
+      serverData = response?.data || response;
+    } catch (err) {
+      console.warn('[AuthService] Server profile update fallback:', err);
+    }
+
+    const existingUser = this.getUser() || {};
+    const updatedUser = {
+      ...existingUser,
+      ...profileData,
+      ...(serverData && typeof serverData === 'object' ? serverData : {}),
+    };
+
+    this.setUser(updatedUser);
+    return updatedUser;
+  }
+
+  /**
+   * POST /api/v1/auth/change-password
+   * @param {Object} passwordData - { oldPassword, newPassword }
+   */
+  async changePassword({ oldPassword, newPassword }) {
+    if (!oldPassword || !newPassword) {
+      throw new APIError('Password saat ini dan baru wajib diisi.', 400);
+    }
+    return apiClient.post('/auth/change-password', {
+      oldPassword,
+      newPassword,
+    });
   }
 }
 

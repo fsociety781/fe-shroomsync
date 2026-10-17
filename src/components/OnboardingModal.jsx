@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ShieldCheck, 
   Lock, 
   User, 
   Phone, 
   Building, 
   MapPin, 
-  CheckCircle, 
   AlertCircle, 
   Sparkles,
   ArrowRight
