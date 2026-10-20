@@ -308,6 +308,7 @@ class TechnicianService {
       phoneNumber: data.phoneNumber?.trim(),
       email: data.email?.trim() || '',
       password: data.password,
+      defaultPassword: data.password,
       region: data.region?.trim() || 'Regional Baru',
     };
 
