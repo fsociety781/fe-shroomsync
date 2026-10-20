@@ -98,13 +98,15 @@ class AuthService {
     const existingUser = this.getUser() || {};
     const rawUser = data?.user || (data?.role || data?.username || data?.id ? data : null) || payload?.user || {};
     const detectedRole = (rawUser.role || data?.role || payload?.role || existingUser.role || 'FARMER').toUpperCase();
+    const isFarmer = detectedRole === 'FARMER';
+    const mustSetup = isFarmer && Boolean(data?.mustSetupProfile ?? rawUser.mustSetupProfile ?? existingUser.mustSetupProfile);
 
     const userProfile = {
       ...existingUser,
       ...rawUser,
       role: detectedRole,
-      mustSetupProfile: Boolean(data?.mustSetupProfile ?? rawUser.mustSetupProfile ?? existingUser.mustSetupProfile),
-      nextStep: data?.nextStep || rawUser.nextStep || (data?.mustSetupProfile ? 'complete_profile' : 'dashboard'),
+      mustSetupProfile: mustSetup,
+      nextStep: isFarmer ? (data?.nextStep || rawUser.nextStep || (mustSetup ? 'complete_profile' : 'dashboard')) : 'dashboard',
     };
 
     this.setUser(userProfile);
@@ -190,14 +192,16 @@ class AuthService {
     const existingUser = this.getUser() || {};
     const rawUser = data?.user || (data?.role || data?.username || data?.id ? data : null) || payload?.user || {};
     const detectedRole = (rawUser.role || data?.role || payload?.role || existingUser.role || 'FARMER').toUpperCase();
+    const isFarmer = detectedRole === 'FARMER';
+    const mustSetup = isFarmer && Boolean(data?.mustSetupProfile ?? rawUser.mustSetupProfile ?? existingUser.mustSetupProfile);
 
     const userProfile = {
       ...existingUser,
       ...rawUser,
       role: detectedRole,
       deviceCount: data?.deviceCount ?? rawUser.deviceCount ?? existingUser.deviceCount ?? 0,
-      mustSetupProfile: Boolean(data?.mustSetupProfile ?? rawUser.mustSetupProfile ?? existingUser.mustSetupProfile),
-      nextStep: data?.nextStep || rawUser.nextStep || existingUser.nextStep || 'dashboard',
+      mustSetupProfile: mustSetup,
+      nextStep: isFarmer ? (data?.nextStep || rawUser.nextStep || (mustSetup ? 'complete_profile' : 'dashboard')) : 'dashboard',
     };
 
     this.setUser(userProfile);

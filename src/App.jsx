@@ -4799,11 +4799,12 @@ function App() {
           setCurrentUser(profile);
           setIsAuthenticated(true);
           setViewMode('app');
-          if (profile.mustSetupProfile || profile.nextStep === 'complete_profile') {
-            setShowOnboarding(true);
-          }
-
           const currentRole = profile?.role?.toUpperCase();
+          if (currentRole === 'FARMER' && (profile.mustSetupProfile || profile.nextStep === 'complete_profile')) {
+            setShowOnboarding(true);
+          } else {
+            setShowOnboarding(false);
+          }
           if (isMobileApp() && currentRole !== 'FARMER') {
             console.warn('[App] Non-farmer session blocked on mobile app:', currentRole);
             api.auth.logout();
@@ -4892,7 +4893,7 @@ function App() {
     setCurrentUser(loginResponse.user);
     setIsAuthenticated(true);
     setViewMode('app');
-    if (loginResponse.mustSetupProfile || loginResponse.nextStep === 'complete_profile') {
+    if (loginRole === 'FARMER' && (loginResponse.mustSetupProfile || loginResponse.nextStep === 'complete_profile')) {
       setShowOnboarding(true);
     } else {
       setShowOnboarding(false);
@@ -5017,8 +5018,10 @@ function App() {
     );
   }
 
-  // If user must setup profile (new farmer onboarding), show dedicated full-page OnboardingScreen
-  if (showOnboarding || currentUser?.mustSetupProfile || currentUser?.nextStep === 'complete_profile') {
+  const userRole = (currentUser?.role || api.auth.getUser()?.role || 'FARMER').toUpperCase();
+
+  // If user must setup profile (new farmer onboarding only), show dedicated full-page OnboardingScreen
+  if (userRole === 'FARMER' && (showOnboarding || currentUser?.mustSetupProfile || currentUser?.nextStep === 'complete_profile')) {
     return (
       <OnboardingScreen 
         user={currentUser} 
@@ -5027,8 +5030,6 @@ function App() {
       />
     );
   }
-
-  const userRole = (currentUser?.role || api.auth.getUser()?.role || 'FARMER').toUpperCase();
 
   return (
     <div className="app-container">
