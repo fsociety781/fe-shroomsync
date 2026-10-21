@@ -8,8 +8,8 @@ const API_CONFIG = {
     wsURL: 'https://api-staging.shroomsync.com',
   },
   production: {
-    baseURL: 'https://api.shroomsync.com/api/v1',
-    wsURL: 'https://api.shroomsync.com',
+    baseURL: 'https://api.shroomsync.web.id/api/v1',
+    wsURL: 'https://api.shroomsync.web.id',
   },
 };
 
