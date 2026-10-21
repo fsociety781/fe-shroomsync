@@ -1,0 +1,9 @@
+services:
+  frontend:
+    container_name: shroomsync_frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
