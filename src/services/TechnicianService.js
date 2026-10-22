@@ -419,6 +419,54 @@ class TechnicianService {
     const response = await apiClient.get(`/technician/ota/logs${qs}`);
     return response?.data?.records || response?.data || response;
   }
+
+  /**
+   * Farmer Management (Teknisi juga berwenang mengelola akun Petani)
+   */
+  async getFarmers() {
+    try {
+      const response = await apiClient.get('/technician/farmers');
+      return response?.data || response;
+    } catch {
+      const response = await apiClient.get('/admin/farmers');
+      return response?.data || response;
+    }
+  }
+
+  async getFarmer(id) {
+    const response = await apiClient.get(`/technician/farmers/${id}`);
+    return response?.data || response;
+  }
+
+  async createFarmer(data) {
+    try {
+      const response = await apiClient.post('/technician/farmers', data);
+      return response?.data || response;
+    } catch {
+      const response = await apiClient.post('/admin/farmers', data);
+      return response?.data || response;
+    }
+  }
+
+  async updateFarmer(id, data) {
+    try {
+      const response = await apiClient.put(`/technician/farmers/${id}`, data);
+      return response?.data || response;
+    } catch {
+      const response = await apiClient.put(`/admin/farmers/${id}`, data);
+      return response?.data || response;
+    }
+  }
+
+  async deleteFarmer(id) {
+    try {
+      const response = await apiClient.delete(`/technician/farmers/${id}`);
+      return response?.data || response;
+    } catch {
+      const response = await apiClient.delete(`/admin/farmers/${id}`);
+      return response?.data || response;
+    }
+  }
 }
 
 const technicianServiceInstance = new TechnicianService();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
+  LayoutDashboard,
   Users,
   UserPlus,
   Cpu,
@@ -17,20 +18,32 @@ import {
   Download,
   MessageSquare,
   QrCode,
-  Trash2
+  Trash2,
+  Terminal,
+  ChevronRight,
 } from 'lucide-react';
 import api from '../services/api';
 import DeviceBarcodeStickerModal from './DeviceBarcodeStickerModal';
 import ConfirmModal from './ConfirmModal';
+import './TechnicianDashboard.css';
 import './AdminDashboard.css';
 
-export default function AdminDashboard({ onMenuToggle, currentUser }) {
-  const [activeTab, setActiveTab] = useState('farmers'); // 'farmers' | 'assignment' | 'overview'
+export default function AdminDashboard({
+  onMenuToggle,
+  currentUser,
+  activeTab: controlledTab,
+  onTabChange,
+}) {
+  const [internalTab, setInternalTab] = useState('dashboard');
+  const activeTab = controlledTab ?? internalTab;
+  const setActiveTab = onTabChange ?? setInternalTab;
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [farmers, setFarmers] = useState([]);
   const [devices, setDevices] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deviceSearchQuery, setDeviceSearchQuery] = useState('');
+  const [deviceFilter, setDeviceFilter] = useState('ALL'); // 'ALL' | 'ASSIGNED' | 'UNASSIGNED'
   const [toast, setToast] = useState(null);
   const [stickerDevice, setStickerDevice] = useState(null);
 
@@ -50,8 +63,6 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
     phoneNumber: '',
     email: '',
     password: 'PasswordDefault123!',
-    farmName: '',
-    farmAddress: '',
   });
 
   const [editFarmerForm, setEditFarmerForm] = useState({
@@ -122,6 +133,23 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
     };
   }, [loadData]);
 
+  // Dynamic device counts
+  const assignedCount = useMemo(() => {
+    if (dashboardData?.assignedDevices !== undefined) return dashboardData.assignedDevices;
+    return devices.filter((d) => {
+      const assignedFarmer = farmers.find((f) =>
+        (f.id && (f.id === d.userId || f.id === d.farmerId)) ||
+        f.devices?.some((dev) => (dev.deviceId || dev.serialNumber || dev.id) === (d.deviceId || d.serialNumber || d.id))
+      );
+      return Boolean(assignedFarmer || d.userId || d.farmerId || d.farmer || d.assignedFarmer || d.ownerName);
+    }).length;
+  }, [dashboardData, devices, farmers]);
+
+  const unassignedCount = useMemo(() => {
+    if (dashboardData?.unassignedDevices !== undefined) return dashboardData.unassignedDevices;
+    return Math.max(0, devices.length - assignedCount);
+  }, [dashboardData, devices, assignedCount]);
+
   // Filter farmers by search
   const filteredFarmers = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -136,6 +164,42 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
     });
   }, [farmers, searchQuery]);
 
+  // Filter devices by status and search query
+  const filteredDevices = useMemo(() => {
+    let list = devices;
+    if (deviceFilter === 'ASSIGNED') {
+      list = list.filter((d) => {
+        const assignedFarmer = farmers.find((f) =>
+          (f.id && (f.id === d.userId || f.id === d.farmerId)) ||
+          f.devices?.some((dev) => (dev.deviceId || dev.serialNumber || dev.id) === (d.deviceId || d.serialNumber || d.id))
+        );
+        return Boolean(assignedFarmer || d.userId || d.farmerId || d.farmer || d.assignedFarmer || d.ownerName);
+      });
+    } else if (deviceFilter === 'UNASSIGNED') {
+      list = list.filter((d) => {
+        const assignedFarmer = farmers.find((f) =>
+          (f.id && (f.id === d.userId || f.id === d.farmerId)) ||
+          f.devices?.some((dev) => (dev.deviceId || dev.serialNumber || dev.id) === (d.deviceId || d.serialNumber || d.id))
+        );
+        return !Boolean(assignedFarmer || d.userId || d.farmerId || d.farmer || d.assignedFarmer || d.ownerName);
+      });
+    }
+
+    const q = deviceSearchQuery.toLowerCase().trim();
+    if (!q) return list;
+
+    return list.filter((d) => {
+      const sn = (d.deviceId || d.serialNumber || d.id || '').toLowerCase();
+      const name = (d.name || '').toLowerCase();
+      const farmer = farmers.find((f) =>
+        (f.id && (f.id === d.userId || f.id === d.farmerId)) ||
+        f.devices?.some((dev) => (dev.deviceId || dev.serialNumber || dev.id) === (d.deviceId || d.serialNumber || d.id))
+      );
+      const farmerName = (farmer?.fullName || d.farmer?.fullName || d.assignedFarmer || '').toLowerCase();
+      return sn.includes(q) || name.includes(q) || farmerName.includes(q);
+    });
+  }, [devices, farmers, deviceFilter, deviceSearchQuery]);
+
   // Submit Create Farmer
   const handleCreateFarmer = async (e) => {
     e?.preventDefault();
@@ -146,16 +210,19 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
 
     try {
       setLoading(true);
-      const result = await api.admin.createFarmer(farmerForm);
-      showNotification(`✓ Akun petani ${result.fullName || farmerForm.fullName} berhasil didaftarkan!`, 'success');
+      const result = await api.admin.createFarmer({
+        fullName: farmerForm.fullName.trim(),
+        phoneNumber: farmerForm.phoneNumber.trim(),
+        email: farmerForm.email?.trim() || undefined,
+        password: farmerForm.password,
+      });
+      showNotification(`✓ Akun petani ${result.fullName || farmerForm.fullName} berhasil didaftarkan! Detail profil akan diisi langsung oleh Petani saat onboarding.`, 'success');
       setShowAddFarmerModal(false);
       setFarmerForm({
         fullName: '',
         phoneNumber: '',
         email: '',
         password: 'PasswordDefault123!',
-        farmName: '',
-        farmAddress: '',
       });
       loadData();
     } catch (err) {
@@ -318,48 +385,86 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
         </div>
       )}
 
-      {/* Top Header - Matching Farmer Dashboard Header Component */}
-      <header className="header" data-page-tone="system">
-        <div className="header-title">
+      {/* ─────────────────────────────────────────────────────────────
+          1. TOP BREADCRUMB & STATUS BAR
+      ───────────────────────────────────────────────────────────── */}
+      <div className="tech-top-banner">
+        <div className="tech-breadcrumb">
+          <Terminal size={13} style={{ opacity: 0.8 }} />
+          <span>Admin Panel</span>
+          <ChevronRight size={10} style={{ opacity: 0.5 }} />
+          <span className="active-crumb">
+            {activeTab === 'dashboard' ? 'Dashboard Wilayah' : activeTab === 'farmers' ? 'Daftar Petani Binaan' : 'Penugasan SupaKu'}
+          </span>
+        </div>
+        <div className="tech-server-status">
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="tech-pulse-dot" />
+            <span>Wilayah: {currentUser?.region || 'Jawa Barat (Lembang)'}</span>
+          </span>
+          <span style={{ opacity: 0.4 }}>•</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Users size={13} style={{ color: '#86efac' }} />
+            <span>{farmers.length} Petani Terdaftar</span>
+          </span>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          2. HEADER WITH TITLE & PRIMARY ACTIONS
+      ───────────────────────────────────────────────────────────── */}
+      <header className="tech-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           {onMenuToggle && (
-            <button className="mobile-menu-toggle" onClick={onMenuToggle} aria-label="Toggle menu">
-              <Menu size={24} />
+            <button
+              onClick={onMenuToggle}
+              className="mobile-menu-toggle"
+              style={{
+                background: 'white',
+                border: '1px solid #E5E7EB',
+                borderRadius: '10px',
+                padding: '8px',
+                color: '#374151',
+                cursor: 'pointer',
+              }}
+              aria-label="Toggle menu"
+            >
+              <Menu size={20} />
             </button>
           )}
-          <div className="header-title-badge" aria-hidden="true">
-            <Shield size={20} />
-          </div>
-          <div className="header-copy">
-            <h2>Portal Administrator Regional</h2>
-            <p>
-              Sesi: <strong style={{ color: 'var(--text-primary)' }}>{currentUser?.fullName || currentUser?.name || 'Admin Wilayah Lembang'}</strong> • Manajemen Petani Binaan & Penugasan SupaKu
+          <div>
+            <h1 className="tech-header-title">Portal Administrator Regional</h1>
+            <p className="tech-header-subtitle">
+              Sesi: <strong style={{ color: '#111827' }}>{currentUser?.fullName || currentUser?.name || 'Admin Wilayah Lembang'}</strong> • Manajemen Petani Binaan & Penugasan SupaKu
             </p>
           </div>
         </div>
 
-        <div className="header-actions">
+        <div className="tech-header-actions">
           <button
-            className="secondary-button"
+            type="button"
+            className="tech-btn-secondary"
             onClick={loadData}
             disabled={loading}
           >
-            <RefreshCw size={15} className={loading ? 'spin-icon' : ''} />
+            <RefreshCw size={14} className={loading ? 'spin-icon' : ''} />
             <span>Refresh</span>
           </button>
 
           <button
-            className="primary-button"
+            type="button"
+            className="tech-btn-primary"
             onClick={() => setShowAddFarmerModal(true)}
           >
-            <UserPlus size={16} />
+            <UserPlus size={15} />
             <span>Daftarkan Petani Baru</span>
           </button>
         </div>
       </header>
 
-      {/* Main Page Content - Standard ShroomSync Farmer Page Layout */}
-      <div className="dashboard-content">
-        {/* Overview Stat Cards - Identical to Farmer Dashboard minimal cards */}
+      {/* Main Page Content */}
+      <div className="tech-content-body">
+        {/* Overview Stat Cards - Aligned with Modern Dashboard Minimal Cards */}
         <div className="stats-row">
           <div className="stat-card minimal">
             <span className="stat-title">
@@ -381,7 +486,7 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
             <span className="stat-title">
               SupaKu Ditugaskan <Link size={14} className="text-sage" />
             </span>
-            <div className="stat-value">{dashboardData?.assignedDevices ?? 3}</div>
+            <div className="stat-value">{assignedCount}</div>
             <div className="stat-status text-sage">Aktif dioperasikan oleh petani</div>
           </div>
 
@@ -389,7 +494,7 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
             <span className="stat-title">
               Tersedia di Gudang <Cpu size={14} className="text-earth" />
             </span>
-            <div className="stat-value">{dashboardData?.unassignedDevices ?? Math.max(0, devices.length - 3)}</div>
+            <div className="stat-value">{unassignedCount}</div>
             <div className="stat-status text-earth">Siap ditugaskan ke petani baru</div>
           </div>
         </div>
@@ -397,6 +502,16 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
         {/* Tab Navigation - Standard ShroomSync Portal Tabs */}
         <div className="portal-tabs">
           <button
+            type="button"
+            className={`portal-tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <LayoutDashboard size={16} />
+            <span>Dashboard Wilayah</span>
+          </button>
+
+          <button
+            type="button"
             className={`portal-tab-btn ${activeTab === 'farmers' ? 'active' : ''}`}
             onClick={() => setActiveTab('farmers')}
           >
@@ -408,13 +523,204 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
           </button>
 
           <button
+            type="button"
             className={`portal-tab-btn ${activeTab === 'assignment' ? 'active' : ''}`}
             onClick={() => setActiveTab('assignment')}
           >
             <Link size={16} />
             <span>Penugasan SupaKu ke Petani</span>
+            <span className="portal-tab-badge">
+              {devices.length}
+            </span>
           </button>
         </div>
+
+        {/* TAB 0: DASHBOARD WILAYAH OVERVIEW */}
+        {activeTab === 'dashboard' && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+            <div className="admin-dashboard-grid">
+              {/* Left Column: Device Utilization & Recent Farmers (8 cols) */}
+              <div className="admin-grid-main">
+                <div className="portal-table-panel" style={{ padding: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>
+                        Pemanfaatan SupaKu Wilayah
+                      </h3>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
+                        Rasio unit fisik yang beroperasi di wilayah {currentUser?.region || 'Jawa Barat (Lembang)'}.
+                      </p>
+                    </div>
+                    <span className="tech-badge-active" style={{ fontSize: '0.75rem', padding: '4px 12px' }}>
+                      {devices.length > 0 ? Math.round((assignedCount / devices.length) * 100) : 100}% Ditugaskan
+                    </span>
+                  </div>
+
+                  {/* Progress Bar & Breakdown */}
+                  <div style={{ marginBottom: '22px' }}>
+                    <div style={{ display: 'flex', height: '14px', borderRadius: '999px', overflow: 'hidden', backgroundColor: '#F3F4F6' }}>
+                      <div
+                        style={{
+                          width: `${devices.length > 0 ? (assignedCount / devices.length) * 100 : 0}%`,
+                          backgroundColor: '#7B5E3C',
+                          transition: 'width 0.5s ease',
+                        }}
+                        title={`Ditugaskan: ${assignedCount} unit`}
+                      />
+                      <div
+                        style={{
+                          width: `${devices.length > 0 ? (unassignedCount / devices.length) * 100 : 0}%`,
+                          backgroundColor: '#E7DCC5',
+                          transition: 'width 0.5s ease',
+                        }}
+                        title={`Tersedia di Gudang: ${unassignedCount} unit`}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.82rem', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#7B5E3C' }} />
+                        <span style={{ color: '#4B5563', fontWeight: 600 }}>Ditugaskan ke Petani:</span>
+                        <strong style={{ color: '#111827' }}>{assignedCount} Unit</strong>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#E7DCC5' }} />
+                        <span style={{ color: '#4B5563', fontWeight: 600 }}>Tersedia di Gudang:</span>
+                        <strong style={{ color: '#111827' }}>{unassignedCount} Unit</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Farmer Roster Preview */}
+                  <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '18px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>
+                        Ringkasan Petani Binaan ({farmers.length})
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('farmers')}
+                        style={{ background: 'none', border: 'none', color: '#7B5E3C', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <span>Buka Roster Lengkap</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {farmers.slice(0, 4).map((f) => (
+                        <div
+                          key={f.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '10px 14px',
+                            borderRadius: '12px',
+                            backgroundColor: '#FAFAFA',
+                            border: '1px solid #F3F4F6',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div className="admin-farmer-avatar" style={{ width: '36px', height: '36px', fontSize: '0.85rem' }}>
+                              {f.fullName?.charAt(0)?.toUpperCase() || 'P'}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827' }}>{f.fullName}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>{f.farmName || 'Kumbung Binaan'} • {f.phoneNumber}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span className="admin-device-chip" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
+                              {f.devices?.length || 0} Unit SupaKu
+                            </span>
+                            <span className={f.status === 'ACTIVE' ? 'tech-badge-active' : 'tech-badge-warning'} style={{ fontSize: '9px' }}>
+                              {f.status === 'ACTIVE' ? 'Aktif' : 'Menunggu'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {farmers.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '24px', color: '#9CA3AF', fontSize: '0.84rem' }}>
+                          Belum ada petani binaan terdaftar di wilayah ini.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Quick Actions & Regional Node Status (4 cols) */}
+              <div className="admin-grid-side">
+                {/* Quick Actions Panel */}
+                <div className="portal-table-panel" style={{ padding: '22px' }}>
+                  <h3 style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 800, color: '#111827' }}>
+                    Aksi Cepat Wilayah
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <button
+                      type="button"
+                      className="tech-btn-primary"
+                      onClick={() => setShowAddFarmerModal(true)}
+                      style={{ width: '100%', justifyContent: 'center' }}
+                    >
+                      <UserPlus size={15} />
+                      <span>+ Daftarkan Petani Baru</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="tech-btn-secondary"
+                      onClick={() => {
+                        setAssignForm({ deviceId: '', farmerId: '' });
+                        setShowAssignModal(true);
+                      }}
+                      style={{ width: '100%', justifyContent: 'center' }}
+                    >
+                      <Link size={15} />
+                      <span>+ Buat Penugasan SupaKu</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="tech-btn-secondary"
+                      onClick={handleExportFarmersCSV}
+                      style={{ width: '100%', justifyContent: 'center' }}
+                    >
+                      <Download size={14} />
+                      <span>Ekspor CSV Petani</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Regional Node Status */}
+                <div className="portal-table-panel" style={{ padding: '22px', backgroundColor: '#FDFBF7', border: '1px solid rgba(231, 220, 197, 0.6)' }}>
+                  <h3 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 800, color: '#7B5E3C', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Shield size={16} />
+                    <span>Simpul Regional ShroomSync</span>
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.82rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(231, 220, 197, 0.6)', paddingBottom: '8px' }}>
+                      <span style={{ color: '#6B7280' }}>Wilayah Kerja:</span>
+                      <strong style={{ color: '#111827' }}>{currentUser?.region || 'Lembang, Jawa Barat'}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(231, 220, 197, 0.6)', paddingBottom: '8px' }}>
+                      <span style={{ color: '#6B7280' }}>Admin Bertugas:</span>
+                      <strong style={{ color: '#111827' }}>{currentUser?.fullName || currentUser?.username || 'Admin'}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(231, 220, 197, 0.6)', paddingBottom: '8px' }}>
+                      <span style={{ color: '#6B7280' }}>Koneksi Server:</span>
+                      <span className="tech-badge-active" style={{ fontSize: '9px', padding: '2px 8px' }}>OPERASIONAL</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#6B7280' }}>Versi Panel:</span>
+                      <strong style={{ color: '#7B5E3C', fontFamily: 'monospace' }}>v2.4.0 (Regional)</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* TAB 1: DAFTAR PETANI BINAAN */}
         {activeTab === 'farmers' && (
@@ -422,48 +728,49 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
             <div className="portal-table-panel">
               {/* Toolbar */}
               <div className="portal-toolbar">
-                <div style={{ position: 'relative', flex: '1 1 260px', maxWidth: '380px' }}>
-                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <div className="admin-search-box">
+                  <Search size={16} className="search-icon" />
                   <input
                     type="text"
                     placeholder="Cari nama petani, kontak, atau kumbung..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px 8px 36px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-primary)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
-                    }}
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      className="clear-btn"
+                      onClick={() => setSearchQuery('')}
+                      title="Hapus pencarian"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <button
-                    className="secondary-button"
+                    type="button"
+                    className="tech-btn-secondary"
                     onClick={handleExportFarmersCSV}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Download size={14} />
                     <span>Ekspor CSV</span>
                   </button>
                   <button
-                    className="primary-button"
+                    type="button"
+                    className="tech-btn-primary"
                     onClick={() => setShowAddFarmerModal(true)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
                     <UserPlus size={14} />
-                    <span>Tambah Petani Binaan</span>
+                    <span>+ Tambah Petani Binaan</span>
                   </button>
                 </div>
               </div>
 
               {/* Table */}
               <div className="table-wrapper">
-                <table className="data-table responsive-table">
+                <table className="tech-table responsive-table">
                   <thead>
                     <tr>
                       <th>Petani & Kumbung</th>
@@ -477,26 +784,27 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
                     {filteredFarmers.map((farmer) => (
                       <tr key={farmer.id}>
                         <td data-label="Petani">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '38px', height: '38px', borderRadius: '8px', backgroundColor: 'rgba(36, 94, 61, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1rem', flexShrink: 0 }}>
-                              {farmer.fullName?.charAt(0) || 'P'}
+                          <div className="admin-farmer-cell">
+                            <div className="admin-farmer-avatar">
+                              {farmer.fullName?.charAt(0)?.toUpperCase() || 'P'}
                             </div>
                             <div>
-                              <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{farmer.fullName}</div>
-                              <div className="text-muted" style={{ fontSize: '0.78rem' }}>{farmer.farmName || 'Kumbung Jamur Binaan'}</div>
+                              <div className="admin-farmer-name">{farmer.fullName}</div>
+                              <div className="admin-farmer-sub">{farmer.farmName || 'Kumbung Jamur Binaan'}</div>
                             </div>
                           </div>
                         </td>
                         <td data-label="Kontak">
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.82rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.82rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span className="font-semibold">{farmer.phoneNumber}</span>
+                              <span style={{ fontWeight: 700, color: '#111827' }}>{farmer.phoneNumber}</span>
                               {farmer.phoneNumber && (
                                 <a
                                   href={`https://wa.me/${farmer.phoneNumber.replace(/[^0-9]/g, '')}?text=Halo%20${encodeURIComponent(farmer.fullName)},%20kami%20dari%20Admin%20Regional%20ShroomSync`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="wa-quick-btn"
+                                  title="Chat via WhatsApp"
                                 >
                                   <MessageSquare size={11} />
                                   <span>WA</span>
@@ -504,31 +812,19 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
                               )}
                             </div>
                             {farmer.farmAddress && (
-                              <span className="text-muted" style={{ fontSize: '0.76rem' }}>{farmer.farmAddress}</span>
+                              <span className="admin-farmer-sub">{farmer.farmAddress}</span>
                             )}
                           </div>
                         </td>
                         <td data-label="Unit SupaKu">
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                             {farmer.devices && farmer.devices.length > 0 ? (
                               farmer.devices.map((d) => (
                                 <span
                                   key={d.deviceId || d.id}
-                                  style={{
-                                    backgroundColor: 'rgba(36, 94, 61, 0.08)',
-                                    border: '1px solid rgba(36, 94, 61, 0.2)',
-                                    color: 'var(--primary)',
-                                    padding: '2px 8px',
-                                    borderRadius: '6px',
-                                    fontSize: '0.74rem',
-                                    fontFamily: 'monospace',
-                                    fontWeight: 600,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '5px',
-                                  }}
+                                  className="admin-device-chip"
                                 >
-                                  <span style={{ color: d.isOnline ? 'var(--sage-green)' : 'var(--error)' }}>●</span>
+                                  <span className={`chip-dot ${d.isOnline ? 'online' : 'offline'}`} />
                                   <span>{d.deviceId || d.id}</span>
                                   <button
                                     type="button"
@@ -536,67 +832,53 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
                                       e.stopPropagation();
                                       handleOpenUnassignModal(d.deviceId || d.id);
                                     }}
-                                    title="Lepas tautan (unpair) perangkat dari petani ini"
-                                    style={{
-                                      background: 'transparent',
-                                      border: 'none',
-                                      color: 'var(--text-muted)',
-                                      cursor: 'pointer',
-                                      padding: '0 2px',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      lineHeight: 1,
-                                    }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--error)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                                    title="Lepas tautan unit dari petani ini"
+                                    className="chip-unlink"
                                   >
                                     <X size={12} />
                                   </button>
                                 </span>
                               ))
                             ) : (
-                              <span className="text-muted" style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>
+                              <span style={{ fontSize: '0.78rem', color: '#9CA3AF', fontStyle: 'italic' }}>
                                 Belum ada unit ditugaskan
                               </span>
                             )}
                           </div>
                         </td>
                         <td data-label="Status" style={{ textAlign: 'center' }}>
-                          <div className="status-badge" style={{ justifyContent: 'center' }}>
-                            <span className={`status-dot ${farmer.status === 'ACTIVE' ? 'bg-sage' : 'bg-warning'}`}></span>
-                            <span className={farmer.status === 'ACTIVE' ? 'text-sage' : 'text-warning'} style={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                              {farmer.status === 'ACTIVE' ? 'Aktif' : 'Menunggu'}
-                            </span>
-                          </div>
+                          <span className={farmer.status === 'ACTIVE' ? 'tech-badge-active' : 'tech-badge-warning'}>
+                            {farmer.status === 'ACTIVE' ? 'Aktif' : 'Menunggu'}
+                          </span>
                         </td>
                         <td data-label="Aksi" style={{ textAlign: 'center' }}>
-                          <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          <div className="admin-table-actions">
                             <button
-                              className="secondary-button compact-button"
+                              type="button"
+                              className="admin-btn-assign"
                               onClick={() => {
                                 setAssignForm({ deviceId: '', farmerId: farmer.id });
                                 setShowAssignModal(true);
                               }}
-                              title="Tugaskan SupaKu"
-                              style={{ padding: '5px 10px', fontSize: '0.78rem' }}
+                              title="Tugaskan unit SupaKu ke petani ini"
                             >
                               <Link size={13} />
                               <span>Tugaskan</span>
                             </button>
                             <button
-                              className="secondary-button compact-button"
+                              type="button"
+                              className="admin-btn-edit"
                               onClick={() => handleOpenEditFarmer(farmer)}
-                              title="Edit Profil"
-                              style={{ padding: '5px 10px', fontSize: '0.78rem' }}
+                              title="Edit Profil Petani"
                             >
                               <Edit3 size={13} />
                               <span>Edit</span>
                             </button>
                             <button
-                              className="secondary-button compact-button"
+                              type="button"
+                              className="admin-btn-danger"
                               onClick={() => handleOpenDeleteModal(farmer)}
-                              title="Hapus Petani"
-                              style={{ padding: '5px 8px', fontSize: '0.78rem', color: 'var(--error)' }}
+                              title="Hapus Akun Petani"
                             >
                               <Trash2 size={13} />
                               <span>Hapus</span>
@@ -607,8 +889,35 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
                     ))}
                     {filteredFarmers.length === 0 && (
                       <tr>
-                        <td colSpan={5} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
-                          Tidak ada data petani binaan yang cocok dengan pencarian.
+                        <td colSpan={5}>
+                          <div className="admin-empty-state">
+                            <div className="admin-empty-icon">
+                              <Users size={24} />
+                            </div>
+                            <p style={{ margin: 0, fontWeight: 700, color: '#374151' }}>
+                              {searchQuery ? 'Tidak ada petani yang cocok dengan kata kunci pencarian.' : 'Belum ada petani binaan terdaftar.'}
+                            </p>
+                            {searchQuery ? (
+                              <button
+                                type="button"
+                                className="tech-btn-secondary"
+                                onClick={() => setSearchQuery('')}
+                                style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+                              >
+                                Reset Pencarian
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="tech-btn-primary"
+                                onClick={() => setShowAddFarmerModal(true)}
+                                style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+                              >
+                                <UserPlus size={14} />
+                                <span>Daftarkan Petani Pertama</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )}
@@ -624,25 +933,75 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
             <div className="portal-table-panel">
               <div className="portal-toolbar">
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Penugasan Unit SupaKu Wilayah</h3>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Petakan unit fisik ke akun petani binaan agar otomatis muncul di dashboard petani.
-                  </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>Penugasan Unit SupaKu Wilayah</h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
+                      Petakan unit fisik ke akun petani binaan agar otomatis muncul di dashboard petani.
+                    </p>
+                  </div>
+                  <div className="admin-filter-pill-group">
+                    <button
+                      type="button"
+                      className={`admin-filter-pill ${deviceFilter === 'ALL' ? 'active' : ''}`}
+                      onClick={() => setDeviceFilter('ALL')}
+                    >
+                      Semua ({devices.length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-filter-pill ${deviceFilter === 'ASSIGNED' ? 'active' : ''}`}
+                      onClick={() => setDeviceFilter('ASSIGNED')}
+                    >
+                      Ditugaskan ({assignedCount})
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-filter-pill ${deviceFilter === 'UNASSIGNED' ? 'active' : ''}`}
+                      onClick={() => setDeviceFilter('UNASSIGNED')}
+                    >
+                      Tersedia ({unassignedCount})
+                    </button>
+                  </div>
                 </div>
 
-                <button
-                  className="primary-button compact-button"
-                  onClick={() => setShowAssignModal(true)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Link size={15} />
-                  <span>+ Buat Penugasan Baru</span>
-                </button>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div className="admin-search-box" style={{ maxWidth: '280px' }}>
+                    <Search size={15} className="search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Cari serial / model..."
+                      value={deviceSearchQuery}
+                      onChange={(e) => setDeviceSearchQuery(e.target.value)}
+                    />
+                    {deviceSearchQuery && (
+                      <button
+                        type="button"
+                        className="clear-btn"
+                        onClick={() => setDeviceSearchQuery('')}
+                        title="Hapus pencarian"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="tech-btn-primary"
+                    onClick={() => {
+                      setAssignForm({ deviceId: '', farmerId: '' });
+                      setShowAssignModal(true);
+                    }}
+                  >
+                    <Link size={14} />
+                    <span>+ Buat Penugasan Baru</span>
+                  </button>
+                </div>
               </div>
 
               <div className="table-wrapper">
-                <table className="data-table responsive-table">
+                <table className="tech-table responsive-table">
                   <thead>
                     <tr>
                       <th>Serial Number SupaKu</th>
@@ -653,7 +1012,7 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {devices.map((d) => {
+                    {filteredDevices.map((d) => {
                       const assignedFarmer = farmers.find((f) =>
                         (f.id && (f.id === d.userId || f.id === d.farmerId)) ||
                         f.devices?.some((dev) => (dev.deviceId || dev.serialNumber || dev.id) === (d.deviceId || d.serialNumber || d.id))
@@ -662,40 +1021,44 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
 
                       return (
                         <tr key={d.deviceId || d.id}>
-                          <td data-label="Serial Number" style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary)' }}>
-                            {d.deviceId || d.id}
+                          <td data-label="Serial Number">
+                            <span className="admin-device-sn-badge">
+                              <Cpu size={13} style={{ color: '#7B5E3C' }} />
+                              <span>{d.deviceId || d.id}</span>
+                            </span>
                           </td>
                           <td data-label="Model">
-                            <div className="font-semibold">{d.name || d.deviceId}</div>
-                            <small className="text-muted">v{d.hardwareVersion || '2.0'}</small>
+                            <div style={{ fontWeight: 700, color: '#111827' }}>{d.name || 'SupaKu IoT Node'}</div>
+                            <small style={{ color: '#6B7280', fontSize: '0.75rem' }}>Hardware v{d.hardwareVersion || '2.0'}</small>
                           </td>
                           <td data-label="Petani">
                             {assignedFarmer || d.farmer || d.assignedFarmer ? (
                               <div>
-                                <div className="font-semibold">{assignedFarmer?.fullName || d.farmer?.fullName || d.assignedFarmer || 'Petani Terdaftar'}</div>
-                                <small className="text-muted">{assignedFarmer?.farmName || d.farmer?.phoneNumber || (d.farmer?.email ? d.farmer.email : 'Binaan Aktif')}</small>
+                                <div style={{ fontWeight: 700, color: '#111827' }}>
+                                  {assignedFarmer?.fullName || d.farmer?.fullName || d.assignedFarmer || 'Petani Terdaftar'}
+                                </div>
+                                <div className="admin-farmer-sub">
+                                  {assignedFarmer?.farmName || d.farmer?.phoneNumber || (d.farmer?.email ? d.farmer.email : 'Binaan Aktif')}
+                                </div>
                               </div>
                             ) : (
-                              <span className="text-muted" style={{ fontStyle: 'italic', fontSize: '0.82rem' }}>
+                              <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontSize: '0.8rem' }}>
                                 Tersedia di Gudang (Belum Ditugaskan)
                               </span>
                             )}
                           </td>
                           <td data-label="Status" style={{ textAlign: 'center' }}>
-                            <div className="status-badge" style={{ justifyContent: 'center' }}>
-                              <span className={`status-dot ${isAssigned ? 'bg-sage' : 'bg-warning'}`}></span>
-                              <span className={isAssigned ? 'text-sage' : 'text-warning'} style={{ fontWeight: 600, fontSize: '0.78rem' }}>
-                                {isAssigned ? 'DITUGASKAN' : 'TERSEDIA'}
-                              </span>
-                            </div>
+                            <span className={isAssigned ? 'tech-badge-active' : 'tech-badge-warning'}>
+                              {isAssigned ? 'DITUGASKAN' : 'TERSEDIA'}
+                            </span>
                           </td>
                           <td data-label="Aksi" style={{ textAlign: 'center' }}>
-                            <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                            <div className="admin-table-actions">
                               {isAssigned ? (
                                 <button
-                                  className="secondary-button compact-button"
+                                  type="button"
+                                  className="admin-btn-danger"
                                   onClick={() => handleOpenUnassignModal(d.deviceId || d.id)}
-                                  style={{ fontSize: '0.78rem', padding: '4px 8px', color: 'var(--error)' }}
                                   title="Lepas penugasan alat dari petani"
                                 >
                                   <Unlink size={13} />
@@ -703,12 +1066,13 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
                                 </button>
                               ) : (
                                 <button
-                                  className="primary-button compact-button"
+                                  type="button"
+                                  className="admin-btn-assign"
                                   onClick={() => {
                                     setAssignForm({ deviceId: d.deviceId || d.id, farmerId: '' });
                                     setShowAssignModal(true);
                                   }}
-                                  style={{ fontSize: '0.78rem', padding: '4px 8px' }}
+                                  title="Tugaskan unit ini ke petani"
                                 >
                                   <Link size={13} />
                                   <span>Tugaskan</span>
@@ -716,18 +1080,47 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
                               )}
 
                               <button
-                                className="icon-button small-icon-button"
+                                type="button"
+                                className="tech-icon-action-btn"
                                 onClick={() => setStickerDevice(d)}
                                 title="Lihat & Cetak Stiker Barcode SupaKu"
-                                style={{ backgroundColor: 'rgba(36, 94, 61, 0.12)' }}
                               >
-                                <QrCode size={13} />
+                                <QrCode size={15} />
                               </button>
                             </div>
                           </td>
                         </tr>
                       );
                     })}
+                    {filteredDevices.length === 0 && (
+                      <tr>
+                        <td colSpan={5}>
+                          <div className="admin-empty-state">
+                            <div className="admin-empty-icon">
+                              <Cpu size={24} />
+                            </div>
+                            <p style={{ margin: 0, fontWeight: 700, color: '#374151' }}>
+                              {deviceSearchQuery || deviceFilter !== 'ALL'
+                                ? 'Tidak ada unit SupaKu yang cocok dengan filter atau pencarian.'
+                                : 'Belum ada unit SupaKu terdaftar di wilayah ini.'}
+                            </p>
+                            {(deviceSearchQuery || deviceFilter !== 'ALL') && (
+                              <button
+                                type="button"
+                                className="tech-btn-secondary"
+                                onClick={() => {
+                                  setDeviceSearchQuery('');
+                                  setDeviceFilter('ALL');
+                                }}
+                                style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+                              >
+                                Reset Filter
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -740,90 +1133,86 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
           MODAL: DAFTARKAN PETANI BARU (POST /admin/farmers)
       ───────────────────────────────────────────────────────────── */}
       {showAddFarmerModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '480px', maxWidth: '92vw', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Pendaftaran Petani Binaan Baru</h3>
-              <button onClick={() => setShowAddFarmerModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
+        <div className="tech-modal-overlay">
+          <motion.div className="tech-modal-card" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ maxWidth: '520px' }}>
+            <div className="tech-modal-header">
+              <div>
+                <h3 className="tech-modal-title">Pendaftaran Petani Binaan Baru</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#6B7280' }}>
+                  Admin memberikan akun awal kepada petani. Saat login pertama, petani wajib onboarding mengganti kata sandi.
+                </p>
+              </div>
+              <button 
+                type="button" 
+                className="tech-modal-close-btn" 
+                onClick={() => setShowAddFarmerModal(false)}
+                aria-label="Tutup"
+              >
+                <X size={18} />
               </button>
             </div>
-            <p className="text-muted" style={{ fontSize: '0.82rem', marginBottom: '18px' }}>
-              Admin memberikan akun awal kepada petani. Saat login pertama, petani wajib onboarding mengganti kata sandi default.
-            </p>
 
             <form onSubmit={handleCreateFarmer} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Nama Lengkap Petani</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Nama Lengkap Petani</label>
                 <input
                   type="text"
+                  className="tech-form-input"
                   placeholder="Contoh: Dadang Sulaeman"
                   value={farmerForm.fullName}
                   onChange={(e) => setFarmerForm({ ...farmerForm, fullName: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
                   required
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Nomor Telepon / WhatsApp (Dipakai Login)</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Nomor Telepon / WhatsApp (Dipakai Login)</label>
                 <input
                   type="tel"
+                  className="tech-form-input"
                   placeholder="Contoh: 081234567890"
                   value={farmerForm.phoneNumber}
                   onChange={(e) => setFarmerForm({ ...farmerForm, phoneNumber: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
                   required
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Email (Opsional)</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Email (Opsional)</label>
                 <input
                   type="email"
+                  className="tech-form-input"
                   placeholder="petani@gmail.com"
                   value={farmerForm.email}
                   onChange={(e) => setFarmerForm({ ...farmerForm, email: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Nama Usaha Tani / Kumbung</label>
+              <div style={{ backgroundColor: '#F5EFE6', border: '1px solid rgba(123, 94, 60, 0.25)', borderRadius: '12px', padding: '10px 14px', fontSize: '0.8rem', color: '#7B5E3C', lineHeight: '1.5' }}>
+                <div style={{ fontWeight: 800, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={14} />
+                  <span>Onboarding Mandiri Petani</span>
+                </div>
+                Detail nama usaha tani, alamat kumbung, dan penggantian kata sandi akan dilengkapi langsung oleh Petani saat pertama kali masuk ke sistem.
+              </div>
+
+              <div className="tech-form-group">
+                <label className="tech-form-label">Kata Sandi Awal Sementara</label>
                 <input
                   type="text"
-                  placeholder="Contoh: Kumbung Jamur Sejahtera"
-                  value={farmerForm.farmName}
-                  onChange={(e) => setFarmerForm({ ...farmerForm, farmName: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Alamat Kumbung Jamur</label>
-                <textarea
-                  rows={2}
-                  placeholder="Alamat fisik kumbung atau rumah petani..."
-                  value={farmerForm.farmAddress}
-                  onChange={(e) => setFarmerForm({ ...farmerForm, farmAddress: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', resize: 'vertical' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Kata Sandi Awal Sementara</label>
-                <input
-                  type="text"
+                  className="tech-form-input"
                   value={farmerForm.password}
                   onChange={(e) => setFarmerForm({ ...farmerForm, password: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', fontFamily: 'monospace' }}
+                  style={{ fontFamily: 'monospace' }}
                   required
                 />
               </div>
 
-              <div className="modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
-                <button type="button" className="secondary-button" onClick={() => setShowAddFarmerModal(false)}>Batal</button>
-                <button type="submit" className="primary-button" disabled={loading}>Daftarkan Petani</button>
+              <div className="tech-modal-actions">
+                <button type="button" className="tech-btn-secondary" onClick={() => setShowAddFarmerModal(false)}>Batal</button>
+                <button type="submit" className="tech-btn-primary" disabled={loading}>
+                  {loading ? 'Mendaftarkan...' : 'Daftarkan Petani'}
+                </button>
               </div>
             </form>
           </motion.div>
@@ -834,42 +1223,49 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
           MODAL: TUGASKAN SUPAKU (POST /admin/devices/assign)
       ───────────────────────────────────────────────────────────── */}
       {showAssignModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '440px', maxWidth: '92vw', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Penugasan Unit SupaKu</h3>
-              <button onClick={() => setShowAssignModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
+        <div className="tech-modal-overlay">
+          <motion.div className="tech-modal-card" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ maxWidth: '480px' }}>
+            <div className="tech-modal-header">
+              <div>
+                <h3 className="tech-modal-title">Penugasan Unit SupaKu</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#6B7280' }}>
+                  Pilih unit SupaKu dan akun petani binaan penerima alat.
+                </p>
+              </div>
+              <button 
+                type="button" 
+                className="tech-modal-close-btn" 
+                onClick={() => setShowAssignModal(false)}
+                aria-label="Tutup"
+              >
+                <X size={18} />
               </button>
             </div>
-            <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '16px' }}>
-              Pilih unit SupaKu dan akun petani binaan penerima alat.
-            </p>
 
             <form onSubmit={handleAssignDevice} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Unit SupaKu</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Unit SupaKu</label>
                 <select
+                  className="tech-form-select"
                   value={assignForm.deviceId}
                   onChange={(e) => setAssignForm({ ...assignForm, deviceId: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
                   required
                 >
                   <option value="">-- Pilih Unit SupaKu --</option>
                   {devices.map((d) => (
                     <option key={d.deviceId || d.id} value={d.deviceId || d.id}>
-                      {d.deviceId || d.id} - {d.name || 'Unit SupaKu'}
+                      {d.deviceId || d.id} - {d.name || 'Unit SupaKu'} {d.isOnline ? '(Online)' : ''}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Petani Binaan Penerima</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Petani Binaan Penerima</label>
                 <select
+                  className="tech-form-select"
                   value={assignForm.farmerId}
                   onChange={(e) => setAssignForm({ ...assignForm, farmerId: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
                   required
                 >
                   <option value="">-- Pilih Petani Binaan --</option>
@@ -881,9 +1277,11 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
                 </select>
               </div>
 
-              <div className="modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
-                <button type="button" className="secondary-button" onClick={() => setShowAssignModal(false)}>Batal</button>
-                <button type="submit" className="primary-button" disabled={loading}>Tugaskan Alat</button>
+              <div className="tech-modal-actions">
+                <button type="button" className="tech-btn-secondary" onClick={() => setShowAssignModal(false)}>Batal</button>
+                <button type="submit" className="tech-btn-primary" disabled={loading}>
+                  {loading ? 'Menugaskan...' : 'Tugaskan Alat'}
+                </button>
               </div>
             </form>
           </motion.div>
@@ -894,59 +1292,86 @@ export default function AdminDashboard({ onMenuToggle, currentUser }) {
           MODAL: EDIT PROFIL PETANI (PUT /admin/farmers/:id)
       ───────────────────────────────────────────────────────────── */}
       {showEditFarmerModal && editingFarmer && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '460px', maxWidth: '92vw', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Edit Profil {editingFarmer.fullName}</h3>
-              <button onClick={() => setShowEditFarmerModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
+        <div className="tech-modal-overlay">
+          <motion.div className="tech-modal-card" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ maxWidth: '480px' }}>
+            <div className="tech-modal-header">
+              <div>
+                <h3 className="tech-modal-title">Edit Profil {editingFarmer.fullName}</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#6B7280' }}>
+                  Perbarui identitas, kontak, dan alamat kumbung petani binaan.
+                </p>
+              </div>
+              <button 
+                type="button" 
+                className="tech-modal-close-btn" 
+                onClick={() => setShowEditFarmerModal(false)}
+                aria-label="Tutup"
+              >
+                <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSaveEditFarmer} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Nama Lengkap</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Nama Lengkap</label>
                 <input
                   type="text"
+                  className="tech-form-input"
                   value={editFarmerForm.fullName}
                   onChange={(e) => setEditFarmerForm({ ...editFarmerForm, fullName: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
+                  required
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Nomor Telepon</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Nomor Telepon</label>
                 <input
                   type="tel"
+                  className="tech-form-input"
                   value={editFarmerForm.phoneNumber}
                   onChange={(e) => setEditFarmerForm({ ...editFarmerForm, phoneNumber: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
+                  required
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Nama Usaha Tani</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Nama Usaha Tani / Kumbung</label>
                 <input
                   type="text"
+                  className="tech-form-input"
                   value={editFarmerForm.farmName}
                   onChange={(e) => setEditFarmerForm({ ...editFarmerForm, farmName: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>Alamat Kumbung</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Alamat Kumbung</label>
                 <textarea
+                  className="tech-form-input"
                   rows={2}
                   value={editFarmerForm.farmAddress}
                   onChange={(e) => setEditFarmerForm({ ...editFarmerForm, farmAddress: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
+                  style={{ resize: 'vertical' }}
                 />
               </div>
 
-              <div className="modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
-                <button type="button" className="secondary-button" onClick={() => setShowEditFarmerModal(false)}>Batal</button>
-                <button type="submit" className="primary-button" disabled={loading}>Simpan Perubahan</button>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Status Akses Petani</label>
+                <select
+                  className="tech-form-select"
+                  value={editFarmerForm.status}
+                  onChange={(e) => setEditFarmerForm({ ...editFarmerForm, status: e.target.value })}
+                >
+                  <option value="ACTIVE">Aktif (Dapat Mengakses Sistem)</option>
+                  <option value="PENDING">Menunggu Verifikasi</option>
+                </select>
+              </div>
+
+              <div className="tech-modal-actions">
+                <button type="button" className="tech-btn-secondary" onClick={() => setShowEditFarmerModal(false)}>Batal</button>
+                <button type="submit" className="tech-btn-primary" disabled={loading}>
+                  {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
               </div>
             </form>
           </motion.div>

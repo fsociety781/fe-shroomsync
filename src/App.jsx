@@ -44,10 +44,18 @@ import {
   Trash2,
   ScanLine,
   QrCode,
-  Wrench
+  Wrench,
+  Cpu,
+  Zap,
+  Users,
+  Terminal,
+  Radio,
+  ChevronRight,
+  Link,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './App.css';
+import './components/TechnicianDashboard.css';
 import api from './services/api';
 import config from './config';
 import LoginScreen from './components/LoginScreen';
@@ -851,7 +859,7 @@ const resolveInitialPage = () => {
 };
 
 // --- Sidebar Component ---
-const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLogout }) => {
+const Sidebar = ({ activePage, setActivePage, activeTechTab = 'dashboard', setActiveTechTab, activeAdminTab = 'dashboard', setActiveAdminTab, isOpen, onClose, currentUser, onLogout }) => {
   const storedUser = api.auth.getUser();
   const rawRole = currentUser?.role || storedUser?.role || 'FARMER';
   const role = String(rawRole).toUpperCase();
@@ -861,15 +869,15 @@ const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLo
   const isFarmerUser = !isTechUser && !isAdminUser;
 
   const roleLabel = isTechUser 
-    ? 'Teknisi ShroomSync' 
+    ? 'Admin Pusat' 
     : isAdminUser 
     ? 'Administrator Wilayah' 
     : (currentUser?.farmName || storedUser?.farmName || 'Petani Kumbung');
 
   const roleBadge = isTechUser
-    ? { label: 'TEKNISI', bg: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: 'rgba(59, 130, 246, 0.4)' }
+    ? { label: 'ADMIN PUSAT', bg: 'rgba(123, 94, 60, 0.15)', color: '#7B5E3C', border: 'rgba(123, 94, 60, 0.35)' }
     : isAdminUser
-    ? { label: 'ADMIN', bg: 'rgba(168, 85, 247, 0.2)', color: '#d8b4fe', border: 'rgba(168, 85, 247, 0.4)' }
+    ? { label: 'ADMIN WILAYAH', bg: 'rgba(123, 94, 60, 0.15)', color: '#7B5E3C', border: 'rgba(123, 94, 60, 0.35)' }
     : { label: 'PETANI', bg: 'rgba(74, 124, 89, 0.2)', color: '#86efac', border: 'rgba(74, 124, 89, 0.4)' };
 
   return (
@@ -887,32 +895,30 @@ const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLo
           <h1 className="logo-text">ShroomSync</h1>
         </div>
 
-        <div className="sidebar-profile">
+        <div className="sidebar-profile" style={{ backgroundColor: '#F5EFE6', border: '1px solid rgba(231, 220, 197, 0.6)', borderRadius: '16px', padding: '12px 14px' }}>
           <div className="profile-avatar" style={{
-            background: isTechUser ? 'rgba(59, 130, 246, 0.2)' : isAdminUser ? 'rgba(168, 85, 247, 0.2)' : undefined,
-            color: isTechUser ? '#60a5fa' : isAdminUser ? '#c084fc' : undefined
+            background: isTechUser ? '#7B5E3C' : isAdminUser ? '#7B5E3C' : '#245E3D',
+            color: '#FFFFFF'
           }}>
-            {isTechUser ? <Wrench size={22} /> : isAdminUser ? <Shield size={22} /> : <User size={22} />}
+            {isTechUser ? <Wrench size={20} /> : isAdminUser ? <Shield size={20} /> : <Sprout size={20} />}
           </div>
           <div className="profile-info">
-            <h4 title={currentUser?.fullName || currentUser?.username} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {currentUser?.fullName || currentUser?.username || (isTechUser ? 'Teknisi Lapangan' : isAdminUser ? 'Admin Wilayah' : 'Petani')}
+            <h4 title={currentUser?.fullName || currentUser?.username} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#111827', fontWeight: 700 }}>
+              {currentUser?.fullName || currentUser?.username || (isTechUser ? 'Teknisi Utama' : isAdminUser ? 'Admin Wilayah' : 'Petani Mitra')}
             </h4>
-            <div style={{ marginTop: '3px' }}>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 700,
-                letterSpacing: '0.3px',
-                padding: '2px 7px',
-                borderRadius: '5px',
-                backgroundColor: roleBadge.bg,
-                color: roleBadge.color,
-                border: `1px solid ${roleBadge.border}`,
-                display: 'inline-block'
-              }}>
-                {roleLabel}
-              </span>
-            </div>
+            {isTechUser ? (
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#7B5E3C', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                ADMIN PUSAT
+              </p>
+            ) : isAdminUser ? (
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#7B5E3C', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                ADMIN WILAYAH
+              </p>
+            ) : (
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#245E3D', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                PETANI KUMBUNG
+              </p>
+            )}
           </div>
         </div>
 
@@ -920,65 +926,147 @@ const Sidebar = ({ activePage, setActivePage, isOpen, onClose, currentUser, onLo
           {/* Petani Navigation - Khusus Petani */}
           {isFarmerUser && (
             <>
-              <a href="#" className={`nav-item ${activePage === 'dashboard' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('dashboard'); onClose?.(); }}>
+              <a href="#" className={`nav-item tech-nav ${activePage === 'dashboard' ? 'tech-active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('dashboard'); onClose?.(); }}>
                 <LayoutDashboard size={20} />
                 <span>Dashboard</span>
               </a>
-              <a href="#" className={`nav-item ${activePage === 'kumbung' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('kumbung'); onClose?.(); }}>
+              <a href="#" className={`nav-item tech-nav ${activePage === 'kumbung' ? 'tech-active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('kumbung'); onClose?.(); }}>
                 <Home size={20} />
                 <span>Kumbung Saya</span>
               </a>
-              <a href="#" className={`nav-item ${activePage === 'monitoring' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('monitoring'); onClose?.(); }}>
+              <a href="#" className={`nav-item tech-nav ${activePage === 'monitoring' ? 'tech-active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('monitoring'); onClose?.(); }}>
                 <Activity size={20} />
                 <span>Monitoring</span>
               </a>
-              <a href="#" className={`nav-item ${activePage === 'siklus' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('siklus'); onClose?.(); }}>
+              <a href="#" className={`nav-item tech-nav ${activePage === 'siklus' ? 'tech-active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('siklus'); onClose?.(); }}>
                 <Sprout size={20} />
                 <span>Siklus & Panen</span>
               </a>
-              <a href="#" className={`nav-item ${activePage === 'kontrol' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('kontrol'); onClose?.(); }}>
+              <a href="#" className={`nav-item tech-nav ${activePage === 'kontrol' ? 'tech-active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('kontrol'); onClose?.(); }}>
                 <Sliders size={20} />
                 <span>Kontrol</span>
               </a>
-              <a href="#" className={`nav-item ${activePage === 'notifikasi' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('notifikasi'); onClose?.(); }}>
+              <a href="#" className={`nav-item tech-nav ${activePage === 'notifikasi' ? 'tech-active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('notifikasi'); onClose?.(); }}>
                 <Bell size={20} />
                 <span>Notifikasi</span>
               </a>
             </>
           )}
 
-          {/* Teknisi Navigation - Khusus Teknisi */}
+          {/* Teknisi Navigation - Khusus Teknisi (Aligned with ShroomSync - DashboardAdmin.html) */}
           {isTechUser && (
-            <a 
-              href="#" 
-              className={`nav-item ${activePage === 'technician' ? 'active' : ''}`} 
-              onClick={(e) => { e.preventDefault(); setActivePage('technician'); onClose?.(); }}
-            >
-              <Wrench size={20} />
-              <span>Portal Teknisi</span>
-            </a>
+            <>
+              <a 
+                href="#" 
+                className={`nav-item tech-nav ${activePage === 'technician' && (activeTechTab === 'dashboard' || !activeTechTab) ? 'tech-active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); setActivePage('technician'); setActiveTechTab?.('dashboard'); onClose?.(); }}
+              >
+                <LayoutDashboard size={20} />
+                <span>Dashboard Sistem</span>
+              </a>
+              <a 
+                href="#" 
+                className={`nav-item tech-nav ${activePage === 'technician' && activeTechTab === 'inventory' ? 'tech-active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); setActivePage('technician'); setActiveTechTab?.('inventory'); onClose?.(); }}
+              >
+                <Cpu size={20} />
+                <span>Device Registry</span>
+              </a>
+              <a 
+                href="#" 
+                className={`nav-item tech-nav ${activePage === 'technician' && activeTechTab === 'ota' ? 'tech-active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); setActivePage('technician'); setActiveTechTab?.('ota'); onClose?.(); }}
+              >
+                <Zap size={20} />
+                <span>Firmware Manager</span>
+              </a>
+              <a 
+                href="#" 
+                className={`nav-item tech-nav ${activePage === 'technician' && activeTechTab === 'admins' ? 'tech-active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); setActivePage('technician'); setActiveTechTab?.('admins'); onClose?.(); }}
+              >
+                <Users size={20} />
+                <span>Manajemen Petani</span>
+              </a>
+              <a 
+                href="#" 
+                className={`nav-item tech-nav ${activePage === 'technician' && activeTechTab === 'logs' ? 'tech-active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); setActivePage('technician'); setActiveTechTab?.('logs'); onClose?.(); }}
+              >
+                <Terminal size={20} />
+                <span>Device Logs</span>
+              </a>
+              <a 
+                href="#" 
+                className={`nav-item tech-nav ${activePage === 'technician' && activeTechTab === 'diagnostics' ? 'tech-active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); setActivePage('technician'); setActiveTechTab?.('diagnostics'); onClose?.(); }}
+              >
+                <Activity size={20} />
+                <span>Health Monitor</span>
+              </a>
+            </>
           )}
 
-          {/* Admin Navigation - Khusus Admin */}
+          {/* Admin Navigation - Khusus Admin Wilayah (Aligned with Technician Sidebar Pattern) */}
           {isAdminUser && (
-            <a 
-              href="#" 
-              className={`nav-item ${activePage === 'admin' ? 'active' : ''}`} 
-              onClick={(e) => { e.preventDefault(); setActivePage('admin'); onClose?.(); }}
-            >
-              <Shield size={20} />
-              <span>Portal Admin</span>
-            </a>
+            <>
+              <a 
+                href="#" 
+                className={`nav-item tech-nav ${activePage === 'admin' && (activeAdminTab === 'dashboard' || !activeAdminTab) ? 'tech-active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); setActivePage('admin'); setActiveAdminTab?.('dashboard'); onClose?.(); }}
+              >
+                <LayoutDashboard size={20} />
+                <span>Dashboard Wilayah</span>
+              </a>
+              <a 
+                href="#" 
+                className={`nav-item tech-nav ${activePage === 'admin' && activeAdminTab === 'farmers' ? 'tech-active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); setActivePage('admin'); setActiveAdminTab?.('farmers'); onClose?.(); }}
+              >
+                <Users size={20} />
+                <span>Petani Binaan</span>
+              </a>
+              <a 
+                href="#" 
+                className={`nav-item tech-nav ${activePage === 'admin' && activeAdminTab === 'assignment' ? 'tech-active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); setActivePage('admin'); setActiveAdminTab?.('assignment'); onClose?.(); }}
+              >
+                <Link size={20} />
+                <span>Penugasan SupaKu</span>
+              </a>
+            </>
           )}
 
           {/* Menu Umum: Profil */}
-          <a href="#" className={`nav-item ${activePage === 'profil' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('profil'); onClose?.(); }}>
+          <a 
+            href="#" 
+            className={`nav-item tech-nav ${activePage === 'profil' ? 'tech-active' : ''}`} 
+            onClick={(e) => { e.preventDefault(); setActivePage('profil'); onClose?.(); }}
+          >
             <User size={20} />
             <span>Profil</span>
           </a>
         </nav>
 
         <div className="sidebar-footer">
+          {isTechUser && (
+            <div style={{ padding: '8px 16px 12px', fontSize: '11px', color: '#9CA3AF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
+              <Info size={14} style={{ color: '#7B5E3C' }} />
+              <span>System v2.4.0</span>
+            </div>
+          )}
+          {isAdminUser && (
+            <div style={{ padding: '8px 16px 12px', fontSize: '11px', color: '#9CA3AF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
+              <Shield size={14} style={{ color: '#7B5E3C' }} />
+              <span>Regional Portal</span>
+            </div>
+          )}
+          {isFarmerUser && (
+            <div style={{ padding: '8px 16px 12px', fontSize: '11px', color: '#9CA3AF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
+              <Sprout size={14} style={{ color: '#245E3D' }} />
+              <span>Farmer Portal</span>
+            </div>
+          )}
           <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); onLogout?.(); onClose?.(); }}>
             <LogOut size={20} />
             <span>Keluar Sesi</span>
@@ -1270,63 +1358,87 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
       />
       
       <div className="dashboard-content">
-        <OrganicTechBand onlineCount={onlineCount} totalDevices={devices.length} />
-
         <motion.div 
           className="stats-row"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
         >
+          {/* Card 1: Kumbung Aktif */}
           <div className="stat-card minimal">
-            <span className="stat-title">Kumbung Aktif <Microchip size={14} className="text-earth" /></span>
+            <span className="stat-title">
+              <span>Total Kumbung</span>
+              <Home size={14} style={{ color: '#7B5E3C' }} />
+            </span>
             <div className="stat-value">{devices.length}</div>
-            <div className="stat-status text-earth">Total</div>
+            <div className="stat-status text-earth">Terdaftar di akun</div>
           </div>
+
+          {/* Card 2: Kumbung Online */}
           <div className="stat-card minimal">
-            <span className="stat-title">Kumbung Online <Wifi size={14} className="text-sage" style={{ display: 'inline', marginLeft: '4px', verticalAlign: 'middle' }} /></span>
+            <span className="stat-title">
+              <span>Kumbung Online</span>
+              <Wifi size={14} style={{ color: '#059669' }} />
+            </span>
             <div className="stat-value">{onlineCount}</div>
-            <div className="stat-status text-sage">{devices.length > 0 ? Math.round((onlineCount / devices.length) * 100) : 0}%</div>
+            <div className="stat-status text-sage">{devices.length > 0 ? Math.round((onlineCount / devices.length) * 100) : 0}% terhubung aktif</div>
           </div>
+
+          {/* Card 3: Status Jadwal */}
+          <div className="stat-card minimal" style={{ cursor: 'pointer' }} onClick={() => setActivePage('kontrol')}>
+            <span className="stat-title">
+              <span>Mode Jadwal</span>
+              <Clock size={14} style={{ color: '#7B5E3C' }} />
+            </span>
+            <div className="stat-value">
+              {activeDashboardDevice?.config?.scheduleMode === 1 ? '1x Sehari' : 
+               activeDashboardDevice?.config?.scheduleMode === 2 ? '2x Sehari' : 
+               activeDashboardDevice?.config?.scheduleMode === 3 ? '3x Sehari' : 'Manual'}
+            </div>
+            <div className="stat-status text-sage">
+              {activeDashboardDevice?.config?.controlMode === 2 ? 'Otomatis' : 'Manual'}
+            </div>
+          </div>
+
+          {/* Card 4: Suhu Rata-rata */}
           <div className="stat-card minimal">
-            <span className="stat-title">Suhu Rata-rata</span>
+            <span className="stat-title">
+              <span>Suhu Rata-rata</span>
+              <Thermometer size={14} style={{ color: '#E07A5F' }} />
+            </span>
             <div className="stat-value">
               {averageTemperature.length > 0
                 ? formatMetric(averageTemperature.reduce((sum, value) => sum + value, 0) / averageTemperature.length, '°C')
                 : '--'}
             </div>
-            <div className="stat-status text-sage">{averageTemperature.length} sensor terbaca</div>
+            <div className="stat-status text-sage">{averageTemperature.length} sensor aktif</div>
           </div>
+
+          {/* Card 5: Kelembaban Rata-rata */}
           <div className="stat-card minimal">
-            <span className="stat-title">Kelembaban Rata-rata</span>
+            <span className="stat-title">
+              <span>Kelembaban Rata-rata</span>
+              <Droplets size={14} style={{ color: '#2D6F6A' }} />
+            </span>
             <div className="stat-value">
               {averageHumidity.length > 0
                 ? formatMetric(averageHumidity.reduce((sum, value) => sum + value, 0) / averageHumidity.length, '%')
                 : '--'}
             </div>
-            <div className="stat-status text-sage">{averageHumidity.length} sensor terbaca</div>
+            <div className="stat-status text-sage">{averageHumidity.length} sensor aktif</div>
           </div>
+
+          {/* Card 6: Alert Aktif */}
           <div className="stat-card minimal" style={{ cursor: dashboardAlerts.length > 0 ? 'pointer' : 'default' }} onClick={() => dashboardAlerts.length > 0 && setActivePage('notifikasi')}>
-            <span className="stat-title">Alert Aktif</span>
-            <div className="stat-value" style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : undefined }}>
+            <span className="stat-title">
+              <span>Status Peringatan</span>
+              <AlertCircle size={14} style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : '#059669' }} />
+            </span>
+            <div className="stat-value" style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : '#111827' }}>
               {dashboardAlerts.length}
             </div>
-            <div className="stat-status font-semibold" style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : 'var(--sage-green)' }}>
+            <div className="stat-status font-semibold" style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : '#059669' }}>
               {dashboardAlerts.length > 0 ? 'Perlu Tindakan' : 'Semua Normal'}
-            </div>
-          </div>
-          <div className="stat-card minimal" style={{ cursor: 'pointer' }} onClick={() => setActivePage('kontrol')}>
-            <span className="stat-title">
-              <Clock size={14} style={{ display: 'inline', marginRight: '4px' }} />
-              Status Jadwal
-            </span>
-            <div className="stat-value" style={{ fontSize: '1.5rem' }}>
-              {activeDashboardDevice?.config?.scheduleMode === 1 ? '1x' : 
-               activeDashboardDevice?.config?.scheduleMode === 2 ? '2x' : 
-               activeDashboardDevice?.config?.scheduleMode === 3 ? '3x' : '-'}
-            </div>
-            <div className="stat-status text-sage">
-              {activeDashboardDevice?.config?.controlMode === 2 ? 'Auto' : 'Manual'}
             </div>
           </div>
         </motion.div>
@@ -1334,26 +1446,44 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
         <div className="dashboard-grid">
           <motion.div 
             className="chart-section panel"
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -15 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+            style={{ padding: '20px 24px' }}
           >
-            <div className="panel-header">
-              <h3>Kondisi Real-time</h3>
-              <div className="dropdown-small">{activeDashboardDevice?.name || 'Pilih Kumbung'} <ChevronDown size={14}/></div>
+            <div className="panel-header" style={{ padding: '0 0 16px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>Kondisi Real-time Sensor</h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
+                  {activeDashboardDevice?.name || 'Kumbung Terpilih'} · Pemantauan suhu & kelembaban
+                </p>
+              </div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 700, color: '#374151' }}>
+                <Activity size={13} style={{ color: '#7B5E3C' }} />
+                <span>{activeDashboardDevice?.name || 'Pilih Kumbung'}</span>
+              </div>
+            </div>
+
+            {/* Metrik ringkas suhu & kelembaban */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', margin: '16px 0' }}>
+              <div style={{ padding: '12px 16px', backgroundColor: '#F9FAFB', borderRadius: '14px', border: '1px solid #F3F4F6' }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#E07A5F' }}>Suhu Terkini</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#111827', margin: '2px 0', lineHeight: 1.2 }}>{formatMetric(activeTemperature, '°C')}</div>
+                <span className={`chart-status ${temperatureStatus.className}`} style={{ fontSize: '0.76rem', fontWeight: 600 }}>{temperatureStatus.label}</span>
+              </div>
+              <div style={{ padding: '12px 16px', backgroundColor: '#F9FAFB', borderRadius: '14px', border: '1px solid #F3F4F6' }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#2D6F6A' }}>Kelembaban Terkini</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#111827', margin: '2px 0', lineHeight: 1.2 }}>{formatMetric(activeHumidity, '%')}</div>
+                <span className={`chart-status ${humidityStatus.className}`} style={{ fontSize: '0.76rem', fontWeight: 600 }}>{humidityStatus.label}</span>
+              </div>
             </div>
             
-            <div className="stacked-charts">
-              <div className="chart-row metric-temp">
-                <div className="chart-info">
-                  <span className="chart-label">Suhu</span>
-                  <div className="chart-current-value">{formatMetric(activeTemperature, '°C')}</div>
-                  <span className={`chart-status ${temperatureStatus.className}`}>{temperatureStatus.label}</span>
-                  <span className="chart-unit">°C</span>
-                </div>
-                <div className="chart-graph">
-                  {formattedDashboardHistory.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={220}>
+            {formattedDashboardHistory.length > 0 ? (
+              <div className="stacked-charts" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Grafik Suhu */}
+                <div className="chart-row metric-temp">
+                  <div className="chart-graph" style={{ height: '180px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={formattedDashboardHistory} margin={{ top: 8, right: 12, left: -10, bottom: 8 }}>
                         <defs>
                           <linearGradient id="dashboardTempGradient" x1="0" y1="0" x2="0" y2="1">
@@ -1362,7 +1492,7 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="4 6" vertical={false} stroke={chartGridStroke} />
-                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={15} minTickGap={24} />
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={10} minTickGap={24} />
                         <YAxis axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={chartAxisFormatter} domain={['dataMin - 2', 'dataMax + 2']} />
                         <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(value) => [`${Number(value).toFixed(2)}°C`, 'Suhu']} />
                         <Area 
@@ -1377,24 +1507,15 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                         />
                       </AreaChart>
                     </ResponsiveContainer>
-                  ) : (
-                    <div className="empty-chart-state">Belum ada riwayat data suhu.</div>
-                  )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="chart-divider"></div>
+                <div className="chart-divider" style={{ height: '1px', backgroundColor: '#F3F4F6' }}></div>
 
-              <div className="chart-row metric-hum">
-                <div className="chart-info">
-                  <span className="chart-label">Kelembaban</span>
-                  <div className="chart-current-value">{formatMetric(activeHumidity, '%')}</div>
-                  <span className={`chart-status ${humidityStatus.className}`}>{humidityStatus.label}</span>
-                  <span className="chart-unit">%</span>
-                </div>
-                <div className="chart-graph">
-                  {formattedDashboardHistory.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={220}>
+                {/* Grafik Kelembaban */}
+                <div className="chart-row metric-hum">
+                  <div className="chart-graph" style={{ height: '180px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={formattedDashboardHistory} margin={{ top: 8, right: 12, left: -10, bottom: 8 }}>
                         <defs>
                           <linearGradient id="dashboardHumGradient" x1="0" y1="0" x2="0" y2="1">
@@ -1403,7 +1524,7 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="4 6" vertical={false} stroke={chartGridStroke} />
-                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={15} minTickGap={24} />
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={10} minTickGap={24} />
                         <YAxis axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={chartAxisFormatter} domain={['dataMin - 5', 'dataMax + 5']} />
                         <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Kelembaban']} />
                         <Area 
@@ -1418,81 +1539,116 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                         />
                       </AreaChart>
                     </ResponsiveContainer>
-                  ) : (
-                    <div className="empty-chart-state">Belum ada riwayat data kelembaban.</div>
-                  )}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div style={{
+                padding: '40px 20px',
+                textAlign: 'center',
+                backgroundColor: '#F9FAFB',
+                borderRadius: '14px',
+                border: '1px dashed #E5E7EB',
+                margin: '10px 0',
+              }}>
+                <Activity size={32} style={{ color: '#7B5E3C', opacity: 0.5, margin: '0 auto 8px', display: 'block' }} />
+                <h4 style={{ margin: '0 0 4px', fontSize: '0.92rem', fontWeight: 700, color: '#374151' }}>
+                  Belum Ada Riwayat Data Sensor
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#9CA3AF' }}>
+                  Grafik telemetri suhu dan kelembaban akan tampil otomatis saat sensor SupaKu aktif mengirim data.
+                </p>
+              </div>
+            )}
           </motion.div>
 
           <div className="lists-section">
             <motion.div 
               className="list-panel panel"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              style={{ padding: '20px 24px' }}
             >
-              <div className="panel-header">
-                <h3>Status Kumbung</h3>
+              <div className="panel-header" style={{ padding: '0 0 14px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#111827' }}>Status Kumbung</h3>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7B5E3C', backgroundColor: '#F5EFE6', padding: '2px 8px', borderRadius: '6px' }}>
+                  {devices.length} Unit
+                </span>
               </div>
-              <div className="device-list">
+              <div className="device-list" style={{ marginTop: '14px', gap: '10px' }}>
                 {devices.map((dev) => {
                   const deviceId = dev.deviceId || dev.id;
                   const reading = latestReadings.find((item) => item.deviceId === deviceId)?.sensor;
                   return (
-                  <div className="device-item" key={deviceId} onClick={() => handleDeviceClick(deviceId)} style={{ cursor: 'pointer' }}>
-                    <div className="device-icon">
+                  <div className="device-item" key={deviceId} onClick={() => handleDeviceClick(deviceId)} style={{ cursor: 'pointer', padding: '10px 14px', borderRadius: '12px', border: '1px solid #F3F4F6', backgroundColor: '#F9FAFB' }}>
+                    <div className="device-icon" style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#F5EFE6', color: '#7B5E3C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Home size={16} />
                     </div>
                     <div className="device-info">
-                      <h4>{dev.name || deviceId}</h4>
-                      <p>
-                        {formatMetric(readTemperature(reading), '°C')} | {formatMetric(readHumidity(reading), '%')} |{' '}
-                        <span className={dev.isOnline ? 'text-sage' : 'text-error'} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          {dev.isOnline ? <Wifi size={14} /> : <Wifi size={14} style={{ opacity: 0.5 }} />}
+                      <h4 style={{ margin: '0 0 2px', fontSize: '0.88rem', fontWeight: 700, color: '#111827' }}>{dev.name || deviceId}</h4>
+                      <p style={{ margin: 0, fontSize: '0.78rem', color: '#6B7280' }}>
+                        {formatMetric(readTemperature(reading), '°C')} · {formatMetric(readHumidity(reading), '%')} ·{' '}
+                        <span className={dev.isOnline ? 'text-sage' : 'text-error'} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: dev.isOnline ? '#10B981' : '#EF4444' }} />
                           {dev.isOnline ? 'Online' : 'Offline'}
                         </span>
                       </p>
                     </div>
                   </div>
                 )})}
-                {devices.length === 0 && <p className="text-muted" style={{ padding: '12px' }}>Belum ada perangkat.</p>}
+                {devices.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '28px 16px', color: '#9CA3AF' }}>
+                    <Home size={28} style={{ margin: '0 auto 6px', opacity: 0.35, display: 'block' }} />
+                    <p style={{ fontWeight: 700, fontSize: '0.85rem', color: '#4B5563', margin: '0 0 2px' }}>Belum ada kumbung</p>
+                    <p style={{ fontSize: '0.75rem', color: '#9CA3AF', margin: 0 }}>Tautkan kumbung Anda di menu Kumbung Saya</p>
+                  </div>
+                )}
               </div>
-              <a href="#" className="view-all" onClick={(e) => { e.preventDefault(); setActivePage('kumbung'); }}>Lihat Semua Kumbung</a>
+              <a href="#" className="view-all" style={{ marginTop: 'auto', paddingTop: '10px', fontSize: '0.82rem', fontWeight: 700, color: '#7B5E3C' }} onClick={(e) => { e.preventDefault(); setActivePage('kumbung'); }}>
+                Lihat Semua Kumbung &rarr;
+              </a>
             </motion.div>
 
             <motion.div 
               className="list-panel panel"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
+              transition={{ duration: 0.4, delay: 0.25 }}
+              style={{ padding: '20px 24px' }}
             >
-              <div className="panel-header">
-                <h3>Notifikasi Terbaru</h3>
+              <div className="panel-header" style={{ padding: '0 0 14px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#111827' }}>Notifikasi Terbaru</h3>
+                <Bell size={15} style={{ color: '#9CA3AF' }} />
               </div>
-              <div className="notif-list">
+              <div className="notif-list" style={{ marginTop: '14px', gap: '10px' }}>
                 {(dashboardAlerts.length > 0 ? dashboardAlerts : dashboardLogs.slice(0, 3).map((log, index) => ({
                   id: log.id || `log-${index}`,
                   text: formatHistoryActivity(log),
                   time: formatRelativeTime(log.createdAt || log.recordedAt || log.time, dashboardNow),
                   type: 'info',
                 }))).slice(0,3).map((notif) => (
-                  <div className="notif-item" key={notif.id}>
-                    <div className={`notif-icon ${notif.type}`}>
-                      <AlertCircle size={16} />
+                  <div className="notif-item" key={notif.id} style={{ padding: '10px 14px', borderRadius: '12px', border: '1px solid #F3F4F6', backgroundColor: '#F9FAFB' }}>
+                    <div className={`notif-icon ${notif.type}`} style={{ width: '32px', height: '32px', borderRadius: '8px' }}>
+                      <AlertCircle size={15} />
                     </div>
                     <div className="notif-info">
-                      <p>{notif.text}</p>
-                      <span className="time">{notif.time}</span>
+                      <p style={{ margin: '0 0 2px', fontSize: '0.82rem', fontWeight: 600, color: '#111827' }}>{notif.text}</p>
+                      <span className="time" style={{ fontSize: '0.72rem', color: '#9CA3AF' }}>{notif.time}</span>
                     </div>
                   </div>
                 ))}
                 {dashboardAlerts.length === 0 && dashboardLogs.length === 0 && (
-                  <p className="text-muted" style={{ padding: '12px' }}>Belum ada peringatan terbaru.</p>
+                  <div style={{ textAlign: 'center', padding: '28px 16px', color: '#9CA3AF' }}>
+                    <Bell size={28} style={{ margin: '0 auto 6px', opacity: 0.35, display: 'block' }} />
+                    <p style={{ fontWeight: 700, fontSize: '0.85rem', color: '#4B5563', margin: '0 0 2px' }}>Semua kondisi normal</p>
+                    <p style={{ fontSize: '0.75rem', color: '#9CA3AF', margin: 0 }}>Tidak ada peringatan aktif saat ini</p>
+                  </div>
                 )}
               </div>
-              <a href="#" className="view-all" onClick={(e) => { e.preventDefault(); setActivePage('notifikasi'); }}>Lihat Semua Notifikasi</a>
+              <a href="#" className="view-all" style={{ marginTop: 'auto', paddingTop: '10px', fontSize: '0.82rem', fontWeight: 700, color: '#7B5E3C' }} onClick={(e) => { e.preventDefault(); setActivePage('notifikasi'); }}>
+                Lihat Semua Notifikasi &rarr;
+              </a>
             </motion.div>
           </div>
         </div>
@@ -1578,18 +1734,52 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
         subtitle="Kelola semua kumbung yang Anda miliki."
         onMenuToggle={onMenuToggle}
         actions={
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
             <button 
+              type="button"
               className="secondary-button" 
               onClick={() => setShowScannerModal(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                backgroundColor: '#FFFFFF',
+                color: '#374151',
+                border: '1px solid #D1D5DB',
+                borderRadius: '12px',
+                padding: '9px 16px',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                transition: 'all 0.15s ease',
+              }}
               title="Scan Barcode / QR SupaKu"
             >
-              <ScanLine size={18} />
+              <ScanLine size={16} style={{ color: '#7B5E3C' }} />
               <span>Scan Barcode</span>
             </button>
-            <button className="primary-button" onClick={() => setShowAddModal(true)}>
-              <Plus size={18} />
+            <button 
+              type="button"
+              className="primary-button" 
+              onClick={() => setShowAddModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                backgroundColor: '#7B5E3C',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '9px 18px',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(123, 94, 60, 0.25)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Plus size={16} />
               <span>Tambah Kumbung</span>
             </button>
           </div>
@@ -1617,39 +1807,125 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
               </thead>
               <tbody>
                 {devices.map((k, idx) => (
-                  <tr key={idx}>
-                    <td data-label="Nama" className="font-semibold">{k.name}</td>
-                    <td data-label="Terakhir" className="text-muted">{formatDateTime(k.lastSeenAt)}</td>
-                    <td data-label="ID" className="text-muted">{k.deviceId || k.id}</td>
-                    <td data-label="Jaringan" className="text-muted" style={{ fontSize: '0.9rem' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span title="WiFi Signal"><Wifi size={12} style={{ display: 'inline', marginRight: '4px' }}/> {k.isOnline ? formatWifi(k.rssiDbm) : '--'}</span>
-                        <span title="Uptime"><Clock size={12} style={{ display: 'inline', marginRight: '4px' }}/> {k.isOnline ? formatUptime(k.uptimeMs) : '--'}</span>
+                  <tr key={k.deviceId || k.id || idx}>
+                    <td data-label="Nama" className="font-semibold" style={{ color: '#111827', fontWeight: 700 }}>
+                      {k.name}
+                    </td>
+                    <td data-label="Terakhir" className="text-muted" style={{ fontSize: '0.82rem', color: '#6B7280' }}>
+                      {formatDateTime(k.lastSeenAt)}
+                    </td>
+                    <td data-label="ID">
+                      <span style={{
+                        fontFamily: 'ui-monospace, monospace',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        backgroundColor: '#F3F4F6',
+                        color: '#374151',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #E5E7EB',
+                        letterSpacing: '0.04em'
+                      }}>
+                        {k.deviceId || k.id}
+                      </span>
+                    </td>
+                    <td data-label="Jaringan" style={{ fontSize: '0.82rem', color: '#4B5563' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <Wifi size={12} style={{ color: k.isOnline ? '#059669' : '#9CA3AF' }} />
+                          {k.isOnline ? formatWifi(k.rssiDbm) : '--'}
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <Clock size={12} style={{ color: '#9CA3AF' }} />
+                          {k.isOnline ? formatUptime(k.uptimeMs) : '--'}
+                        </span>
                       </div>
                     </td>
                     <td data-label="Status">
-                      <div className="status-badge">
-                        <span className={`status-dot ${k.isOnline ? 'bg-sage' : 'bg-error'}`}></span>
-                        <span className={k.isOnline ? 'text-sage' : 'text-error'}>{k.isOnline ? 'Online' : 'Offline'}</span>
-                      </div>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        backgroundColor: k.isOnline ? '#ECFDF5' : '#FEF2F2',
+                        color: k.isOnline ? '#059669' : '#DC2626',
+                        border: `1px solid ${k.isOnline ? '#A7F3D0' : '#FECACA'}`,
+                      }}>
+                        <span style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: k.isOnline ? '#10B981' : '#EF4444',
+                        }} />
+                        {k.isOnline ? 'Online' : 'Offline'}
+                      </span>
                     </td>
-                    <td data-label="Aksi" style={{ position: 'relative' }}>
-                      <button className="action-button" onClick={() => setOpenMenu(openMenu === idx ? null : idx)}>
-                        <MoreVertical size={18} />
-                      </button>
-                      {openMenu === idx && (
-                        <div className="dropdown-menu" style={{ position: 'absolute', right: '40px', top: '10px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', boxShadow: 'var(--shadow-md)', zIndex: 10, width: '150px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                          <button className="dropdown-item" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-primary)' }} onClick={() => handleDetailClick(k)}>
-                            Detail Perangkat
-                          </button>
-                          <button className="dropdown-item" style={{ padding: '12px 16px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-primary)' }} onClick={() => handleCyclesClick(k)}>
-                            Siklus & Panen
-                          </button>
-                        </div>
-                      )}
+                    <td data-label="Aksi">
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDetailClick(k)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            backgroundColor: '#F5EFE6',
+                            color: '#7B5E3C',
+                            border: '1px solid rgba(123, 94, 60, 0.25)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#7B5E3C'; e.currentTarget.style.color = '#FFFFFF'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F5EFE6'; e.currentTarget.style.color = '#7B5E3C'; }}
+                          title="Buka Monitoring Sensor Kumbung"
+                        >
+                          <Activity size={13} />
+                          <span>Monitoring</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCyclesClick(k)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            backgroundColor: '#FFFFFF',
+                            color: '#4B5563',
+                            border: '1px solid #E5E7EB',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#7B5E3C'; e.currentTarget.style.color = '#7B5E3C'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.color = '#4B5563'; }}
+                          title="Buka Siklus & Panen"
+                        >
+                          <Sprout size={13} />
+                          <span>Siklus</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
+                {devices.length === 0 && (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '36px 16px', color: '#9CA3AF' }}>
+                      <Home size={32} style={{ margin: '0 auto 8px', opacity: 0.35, display: 'block' }} />
+                      <p style={{ fontWeight: 700, fontSize: '0.95rem', color: '#4B5563', margin: '0 0 4px' }}>Belum ada kumbung terdaftar</p>
+                      <p style={{ fontSize: '0.8rem', color: '#9CA3AF', margin: 0 }}>Gunakan tombol "Tambah Kumbung" atau "Scan Barcode" untuk menautkan perangkat SupaKu Anda.</p>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -1658,19 +1934,24 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
 
       {/* Modal Tambah & Aktivasi Kumbung */}
       {showAddModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '420px', maxWidth: '92vw', padding: '24px' }}>
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17, 24, 39, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <motion.div className="modal-content" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '440px', maxWidth: '92vw', padding: '24px', backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #F3F4F6', boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.15)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Aktivasi & Tautkan Kumbung</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#F5EFE6', color: '#7B5E3C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Plus size={20} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#111827' }}>Aktivasi & Tautkan Kumbung</h3>
+              </div>
               <button 
                 onClick={() => setShowAddModal(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '6px', borderRadius: '8px' }}
                 title="Tutup"
               >
                 <X size={20} />
               </button>
             </div>
-            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '18px' }}>
+            <p style={{ fontSize: '0.82rem', color: '#6B7280', margin: '4px 0 18px 46px' }}>
               Tautkan serial number / Device ID SupaKu fisik ke akun kumbung Anda.
             </p>
             
@@ -1681,47 +1962,47 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '12px 14px',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(74, 124, 89, 0.12)',
-                border: '1px dashed rgba(74, 124, 89, 0.4)',
+                padding: '12px 16px',
+                borderRadius: '14px',
+                backgroundColor: '#F5EFE6',
+                border: '1px dashed rgba(123, 94, 60, 0.45)',
                 marginBottom: '18px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(74, 124, 89, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary, #5a9e6f)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7B5E3C', boxShadow: '0 2px 6px rgba(123, 94, 60, 0.1)' }}>
                   <ScanLine size={18} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#111827' }}>
                     Scan Barcode / QR Fisik
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#6B7280' }}>
                     Pindai stiker atau QR SupaKu
                   </div>
                 </div>
               </div>
-              <span style={{ fontSize: '0.78rem', color: 'var(--primary, #5a9e6f)', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.78rem', color: '#7B5E3C', fontWeight: 700 }}>
                 Buka Kamera &rarr;
               </span>
             </div>
 
             <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Nama Kumbung</label>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.82rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nama Kumbung</label>
               <input 
                 type="text" 
-                placeholder="Masukkan nama kumbung..." 
+                placeholder="Misal: Kumbung A - Sayap Timur" 
                 value={newDevice.name} 
                 onChange={(e) => setNewDevice({...newDevice, name: e.target.value})} 
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }} 
+                style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #D1D5DB', backgroundColor: '#FFFFFF', color: '#111827', fontSize: '0.9rem', outline: 'none' }} 
               />
             </div>
 
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label style={{ fontSize: '0.9rem' }}>ID Perangkat (Device ID)</label>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>ID Perangkat (Device ID)</label>
                 <button
                   type="button"
                   onClick={() => setShowScannerModal(true)}
@@ -1731,15 +2012,15 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
                     gap: '4px',
                     background: 'transparent',
                     border: 'none',
-                    color: 'var(--primary, #5a9e6f)',
+                    color: '#7B5E3C',
                     fontSize: '0.78rem',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: 'pointer',
                     padding: '2px 4px',
                   }}
                 >
                   <QrCode size={13} />
-                  <span>Scan Barcode</span>
+                  <span>Scan</span>
                 </button>
               </div>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -1748,7 +2029,7 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
                   placeholder="Misal: SS-005" 
                   value={newDevice.deviceId} 
                   onChange={(e) => setNewDevice({...newDevice, deviceId: e.target.value})} 
-                  style={{ width: '100%', padding: '12px 42px 12px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }} 
+                  style={{ width: '100%', padding: '11px 42px 11px 14px', borderRadius: '10px', border: '1px solid #D1D5DB', backgroundColor: '#FFFFFF', color: '#111827', fontSize: '0.9rem', outline: 'none', fontFamily: 'monospace' }} 
                 />
                 <button
                   type="button"
@@ -1756,10 +2037,10 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
                   title="Scan Barcode / QR Code"
                   style={{
                     position: 'absolute',
-                    right: '6px',
+                    right: '8px',
                     background: 'transparent',
                     border: 'none',
-                    color: 'var(--primary, #5a9e6f)',
+                    color: '#7B5E3C',
                     cursor: 'pointer',
                     padding: '6px',
                     display: 'flex',
@@ -1772,13 +2053,11 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
               </div>
             </div>
 
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Key size={14} style={{ color: 'var(--primary, #5a9e6f)' }} />
-                  <span>Kode Aktivasi (Tertera di Stiker / Opsional)</span>
-                </label>
-              </div>
+            <div className="form-group" style={{ marginBottom: '22px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', fontSize: '0.82rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <Key size={13} style={{ color: '#7B5E3C' }} />
+                <span>Kode Aktivasi (Opsional)</span>
+              </label>
               <input 
                 type="text" 
                 placeholder="Misal: ACT-XXXX atau SUPA-9921" 
@@ -1786,22 +2065,56 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
                 onChange={(e) => setNewDevice({...newDevice, activationCode: e.target.value.toUpperCase()})} 
                 style={{ 
                   width: '100%', 
-                  padding: '12px', 
-                  borderRadius: '8px', 
-                  border: '1px solid var(--border-color)', 
-                  backgroundColor: 'transparent', 
-                  color: 'var(--text-primary)',
-                  letterSpacing: '0.05em'
+                  padding: '11px 14px', 
+                  borderRadius: '10px', 
+                  border: '1px solid #D1D5DB', 
+                  backgroundColor: '#FFFFFF', 
+                  color: '#111827',
+                  fontSize: '0.9rem',
+                  letterSpacing: '0.05em',
+                  fontFamily: 'monospace',
+                  outline: 'none'
                 }} 
               />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '6px' }}>
-                *Terisi otomatis saat scan QR stiker fisik alat, atau ketik manual dari stiker perangkat.
+              <span style={{ fontSize: '0.74rem', color: '#9CA3AF', display: 'block', marginTop: '6px' }}>
+                *Terisi otomatis saat scan QR stiker fisik alat, atau ketik manual jika ada kode keamanan.
               </span>
             </div>
 
-            <div className="modal-actions" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button className="secondary-button" onClick={() => setShowAddModal(false)}>Batal</button>
-              <button className="primary-button" onClick={handleAddDevice}>Simpan & Aktivasi</button>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid #F3F4F6' }}>
+              <button 
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid #E5E7EB',
+                  backgroundColor: '#F9FAFB',
+                  color: '#4B5563',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Batal
+              </button>
+              <button 
+                type="button"
+                onClick={handleAddDevice}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: '#7B5E3C',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(123, 94, 60, 0.25)',
+                }}
+              >
+                Simpan & Aktivasi
+              </button>
             </div>
           </motion.div>
         </div>
@@ -3305,6 +3618,22 @@ const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, devices, onL
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
+  const userRole = (currentUser?.role || '').toUpperCase();
+  const isTechUser = userRole === 'TECHNICIAN';
+  const isAdminUser = userRole === 'ADMIN';
+  const isFarmerUser = !isTechUser && !isAdminUser;
+
+  const userHandle = currentUser?.username 
+    || (currentUser?.email ? currentUser.email.split('@')[0] : (isTechUser ? 'teknisi' : isAdminUser ? 'admin' : 'petani'));
+
+  const roleDisplayName = isTechUser
+    ? 'Teknisi Lapangan & Sistem IoT SupaKu'
+    : isAdminUser
+    ? 'Administrator Wilayah ShroomSync'
+    : 'Petani Kumbung Jamur';
+
+  const roleBadgeLabel = isTechUser ? 'ADMIN PUSAT' : isAdminUser ? 'ADMIN WILAYAH' : 'PETANI MITRA';
+
   const handleOpenEdit = () => {
     setEditForm({
       fullName: currentUser?.fullName || '',
@@ -3380,203 +3709,379 @@ const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, devices, onL
   return (
     <>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      <Header 
-        title="Profil Pengguna"
-        onMenuToggle={onMenuToggle}
-        subtitle="Kelola informasi akun dan preferensi aplikasi Anda."
-      />
       
-      <div className="page-content">
-        <div className="dashboard-grid">
-          <motion.div 
-            className="panel"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="profile-card">
-              <div className="profile-card-header">
-                <div className="profile-avatar-large">
-                  <User size={48} />
-                  <button className="edit-avatar-btn" onClick={handleOpenEdit} aria-label="Edit avatar">
-                    <Camera size={14} />
-                  </button>
-                </div>
-                <div className="profile-card-info">
-                  <h3>{currentUser?.fullName || currentUser?.username || 'Petani Jamur'}</h3>
-                  <p className="text-sage font-semibold">
-                    {currentUser?.role?.toUpperCase() === 'ADMIN' 
-                      ? 'Administrator Wilayah ShroomSync' 
-                      : currentUser?.role?.toUpperCase() === 'TECHNICIAN'
-                      ? 'Teknisi Lapangan ShroomSync'
-                      : 'Petani Kumbung Jamur'}
-                  </p>
-                  {currentUser?.farmName && (
-                    <p className="text-muted" style={{ fontSize: '0.85rem', marginTop: '2px' }}>
-                      {currentUser.farmName}
-                    </p>
-                  )}
-                </div>
+      {isTechUser ? (
+        <>
+          {/* Status Bar & Breadcrumb khusus Teknisi */}
+          <div className="tech-top-banner">
+            <div className="tech-breadcrumb">
+              <Terminal size={13} style={{ opacity: 0.8 }} />
+              <span>Admin Panel</span>
+              <ChevronRight size={10} style={{ opacity: 0.5 }} />
+              <span className="active-crumb">Profil Pengguna</span>
+            </div>
+            <div className="tech-server-status">
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="tech-pulse-dot" />
+                <span>Server Status: Operational</span>
+              </span>
+              <span style={{ opacity: 0.4 }}>•</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Radio size={13} style={{ color: '#86efac' }} />
+                <span>MQTT Broker: Connected</span>
+              </span>
+            </div>
+          </div>
+
+          <header className="tech-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              {onMenuToggle && (
+                <button
+                  onClick={onMenuToggle}
+                  className="mobile-menu-toggle"
+                  style={{
+                    background: 'white',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '10px',
+                    padding: '8px',
+                    color: '#374151',
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Toggle Navigation Menu"
+                >
+                  <Menu size={20} />
+                </button>
+              )}
+              <div>
+                <h1 className="tech-header-title">Profil Pengguna</h1>
+                <p className="tech-header-subtitle">Kelola informasi akun teknisi, kredensial, dan preferensi keamanan sistem.</p>
               </div>
-              
-              <div className="profile-details">
-                <div className="profile-detail-item">
-                  <User size={18} className="text-muted" />
-                  <span>@{currentUser?.username || 'petani'}</span>
-                </div>
-                <div className="profile-detail-item">
-                  <Mail size={18} className="text-muted" />
-                  <span>{currentUser?.email || 'email@belum-diatur.com'}</span>
-                </div>
-                <div className="profile-detail-item">
-                  <Phone size={18} className="text-muted" />
-                  <span>{currentUser?.phoneNumber || 'Nomor WhatsApp belum diisi'}</span>
-                </div>
-                {currentUser?.farmAddress && (
-                  <div className="profile-detail-item" style={{ alignItems: 'flex-start' }}>
-                    <Home size={18} className="text-muted" style={{ marginTop: '2px' }} />
-                    <span style={{ lineHeight: '1.4' }}>{currentUser.farmAddress}</span>
-                  </div>
-                )}
-                {currentUser?.role?.toUpperCase() === 'TECHNICIAN' ? (
-                  <div className="profile-detail-item">
-                    <Wrench size={18} className="text-muted" />
-                    <span>Divisi Hardware & Firmware SupaKu</span>
-                  </div>
-                ) : currentUser?.role?.toUpperCase() === 'ADMIN' ? (
-                  <div className="profile-detail-item">
-                    <Shield size={18} className="text-muted" />
-                    <span>Otoritas Manajemen Wilayah ShroomSync</span>
-                  </div>
-                ) : (
-                  <div className="profile-detail-item">
-                    <CircuitBoard size={18} className="text-muted" />
-                    <span>{devices?.length || currentUser?.deviceCount || 0} SupaKu Terhubung</span>
-                  </div>
-                )}
+            </div>
+            <div className="tech-header-actions">
+              <button 
+                type="button"
+                className="tech-btn-primary"
+                onClick={handleOpenEdit}
+              >
+                <Pencil size={14} />
+                <span>Edit Profil</span>
+              </button>
+            </div>
+          </header>
+        </>
+      ) : (
+        <Header 
+          title="Profil Pengguna"
+          onMenuToggle={onMenuToggle}
+          subtitle="Kelola informasi akun dan preferensi aplikasi Anda."
+        />
+      )}
+      
+      <div className={isTechUser ? "tech-content-body" : "page-content"} style={{ maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
+        <div className="profile-layout-grid">
+          {/* KARTU 1: Profil Akun */}
+          <motion.div 
+            className="tech-profile-card"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Header: Avatar, Name, Role Badge, Subtitle */}
+            <div className="tech-profile-header">
+              <div className="tech-profile-avatar">
+                {isTechUser ? <Wrench size={30} /> : <User size={32} />}
+                <button 
+                  type="button"
+                  className="tech-profile-avatar-badge" 
+                  onClick={handleOpenEdit} 
+                  aria-label="Edit avatar / profil"
+                  title="Edit Profil"
+                >
+                  <Camera size={13} />
+                </button>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-                <button className="primary-button outline" style={{ flex: 1 }} onClick={handleOpenEdit}>
-                  Edit Profil
-                </button>
-                <button className="secondary-button" onClick={() => setShowPasswordModal(true)} title="Ganti Kata Sandi">
-                  <Key size={16} />
-                </button>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#111827' }}>
+                    {currentUser?.fullName || currentUser?.username || (isTechUser ? 'Teknisi ShroomSync' : 'Petani Jamur')}
+                  </h3>
+                  <span 
+                    style={{
+                      fontSize: '9.5px',
+                      fontWeight: 800,
+                      letterSpacing: '0.08em',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: '#F5EFE6',
+                      color: '#7B5E3C',
+                      border: '1px solid rgba(123, 94, 60, 0.25)',
+                    }}
+                  >
+                    {roleBadgeLabel}
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.84rem', fontWeight: 600, color: '#7B5E3C' }}>
+                  {roleDisplayName}
+                </p>
               </div>
+            </div>
+
+            {/* List 4 Info Cards (Matching Right Card) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+              <div className="tech-profile-item">
+                <div className="tech-profile-item-icon">
+                  <User size={18} />
+                </div>
+                <div className="tech-profile-item-content">
+                  <div className="tech-profile-item-label">Username Akun</div>
+                  <div className="tech-profile-item-value">@{userHandle}</div>
+                </div>
+              </div>
+
+              <div className="tech-profile-item">
+                <div className="tech-profile-item-icon">
+                  <Mail size={18} />
+                </div>
+                <div className="tech-profile-item-content">
+                  <div className="tech-profile-item-label">Email Terdaftar</div>
+                  <div className="tech-profile-item-value" title={currentUser?.email || 'teknisi@shroomsync.local'}>
+                    {currentUser?.email || 'teknisi@shroomsync.local'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="tech-profile-item">
+                <div className="tech-profile-item-icon">
+                  <Phone size={18} />
+                </div>
+                <div className="tech-profile-item-content">
+                  <div className="tech-profile-item-label">Kontak WhatsApp / HP</div>
+                  <div className="tech-profile-item-value">
+                    {currentUser?.phoneNumber || '081234567890'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="tech-profile-item">
+                <div className="tech-profile-item-icon">
+                  {isTechUser ? <Wrench size={18} /> : isAdminUser ? <Shield size={18} /> : <Home size={18} />}
+                </div>
+                <div className="tech-profile-item-content">
+                  <div className="tech-profile-item-label">
+                    {isTechUser ? 'Penugasan Divisi' : isAdminUser ? 'Wilayah Operasional' : 'Lokasi Kumbung'}
+                  </div>
+                  <div className="tech-profile-item-value">
+                    {isTechUser 
+                      ? 'Divisi Hardware & Firmware SupaKu' 
+                      : isAdminUser 
+                      ? 'Otoritas Manajemen Wilayah ShroomSync' 
+                      : (currentUser?.farmAddress || 'Kumbung Jamur Utama')}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Clean Edit Profile Button at the bottom */}
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #F3F4F6' }}>
+              <button 
+                type="button"
+                className="tech-btn-secondary" 
+                style={{ width: '100%', justifyContent: 'center', height: '42px', gap: '8px', fontWeight: 600 }} 
+                onClick={handleOpenEdit}
+              >
+                <Pencil size={15} />
+                <span>Edit Informasi Profil</span>
+              </button>
             </div>
           </motion.div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <motion.div 
-              className="panel"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-            >
-              <div className="panel-header">
-                <h3>Pengaturan Keamanan & Akun</h3>
+          {/* KARTU 2: Pengaturan Keamanan & Akun */}
+          <motion.div 
+            className="tech-profile-card"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.08 }}
+          >
+            {/* Header: Title & Subtitle with matching height/border as Left Card */}
+            <div className="tech-profile-header">
+              <div className="tech-profile-item-icon" style={{ backgroundColor: 'rgba(107, 143, 113, 0.15)', color: '#6B8F71', width: '48px', height: '48px', borderRadius: '14px' }}>
+                <Shield size={24} />
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#111827' }}>
+                  Keamanan & Akses
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.84rem', color: '#6B7280' }}>
+                  Kredensial login, sesi aktif, dan kendali akun
+                </p>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+              <div 
+                className="tech-profile-item" 
+                onClick={() => setShowPasswordModal(true)} 
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="tech-profile-item-icon" style={{ backgroundColor: '#F5EFE6', color: '#7B5E3C' }}>
+                  <Key size={18} />
+                </div>
+                <div className="tech-profile-item-content">
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111827' }}>Ganti Kata Sandi</div>
+                  <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>Perbarui kata sandi akun secara berkala</div>
+                </div>
+                <div style={{ color: '#9CA3AF' }}>
+                  <ChevronDown size={18} style={{ transform: 'rotate(-90deg)' }} />
+                </div>
               </div>
               
-              <div className="settings-list">
-                <div className="settings-item" onClick={() => setShowPasswordModal(true)} style={{ cursor: 'pointer' }}>
-                  <div className="settings-info">
-                    <div className="settings-icon"><Key size={18} /></div>
-                    <div>
-                      <h4>Ganti Kata Sandi</h4>
-                      <p>Perbarui kata sandi akun secara berkala.</p>
-                    </div>
-                  </div>
-                  <button className="action-button"><ChevronDown size={18} style={{ transform: 'rotate(-90deg)' }} /></button>
+              <div className="tech-profile-item">
+                <div className="tech-profile-item-icon" style={{ backgroundColor: 'rgba(107, 143, 113, 0.15)', color: '#6B8F71' }}>
+                  <Shield size={18} />
                 </div>
-                
-                <div className="settings-item">
-                  <div className="settings-info">
-                    <div className="settings-icon"><Shield size={18} /></div>
-                    <div>
-                      <h4>Status Akun</h4>
-                      <p>{currentUser?.isFirstLogin ? 'Akun Baru' : 'Akun Terverifikasi Aktif'}</p>
-                    </div>
-                  </div>
-                  <div className="status-badge">
-                    <span className="status-dot bg-sage"></span>
-                    <span className="text-sage font-semibold">Aktif</span>
+                <div className="tech-profile-item-content">
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111827' }}>Status Akun</div>
+                  <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+                    {currentUser?.isFirstLogin ? 'Akun Baru Terdaftar' : 'Akun Terverifikasi Aktif'}
                   </div>
                 </div>
-
-                <div className="settings-item" onClick={onLogout} style={{ cursor: 'pointer' }}>
-                  <div className="settings-info">
-                    <div className="settings-icon" style={{ background: 'rgba(229, 83, 83, 0.1)', color: 'var(--error)' }}><LogOut size={18} /></div>
-                    <div>
-                      <h4 style={{ color: 'var(--error)' }}>Keluar dari Aplikasi</h4>
-                      <p>Hapus sesi masuk pada perangkat ini.</p>
-                    </div>
-                  </div>
-                  <button className="action-button"><ChevronDown size={18} style={{ transform: 'rotate(-90deg)' }} /></button>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', backgroundColor: 'rgba(107, 143, 113, 0.12)', border: '1px solid rgba(107, 143, 113, 0.25)' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#6B8F71' }}></span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6B8F71' }}>Aktif</span>
                 </div>
               </div>
-            </motion.div>
 
-            <motion.div 
-              className="panel"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-                {/* Sistem & Pembaruan panel removed per request */}
-            </motion.div>
-          </div>
+              <div className="tech-profile-item">
+                <div className="tech-profile-item-icon" style={{ backgroundColor: '#F3F4F6', color: '#4B5563' }}>
+                  <Terminal size={18} />
+                </div>
+                <div className="tech-profile-item-content">
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111827' }}>Keamanan Sesi</div>
+                  <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>Terotentikasi via JWT Bearer Token</div>
+                </div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '999px', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', fontSize: '0.78rem', fontWeight: 700, color: '#4B5563' }}>
+                  Aman
+                </div>
+              </div>
+
+              <div 
+                className="tech-profile-item" 
+                onClick={onLogout} 
+                style={{ cursor: 'pointer', backgroundColor: 'rgba(254, 242, 242, 0.5)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+              >
+                <div className="tech-profile-item-icon" style={{ backgroundColor: 'rgba(239, 68, 68, 0.12)', color: '#EF4444' }}>
+                  <LogOut size={18} />
+                </div>
+                <div className="tech-profile-item-content">
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#DC2626' }}>Keluar dari Aplikasi</div>
+                  <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>Hapus sesi masuk pada perangkat ini</div>
+                </div>
+                <div style={{ color: '#EF4444' }}>
+                  <ChevronDown size={18} style={{ transform: 'rotate(-90deg)' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Quick action button matching Left Card bottom */}
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #F3F4F6' }}>
+              <button 
+                type="button"
+                className="tech-btn-secondary" 
+                style={{ width: '100%', justifyContent: 'center', height: '42px', gap: '8px', fontWeight: 600 }} 
+                onClick={() => setShowPasswordModal(true)}
+              >
+                <Key size={15} />
+                <span>Ganti Kata Sandi Akun</span>
+              </button>
+            </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Modal Edit Profil */}
       {showEditModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '440px', padding: '24px' }}>
-            <h3 style={{ marginBottom: '8px' }}>Edit Informasi Profil</h3>
-            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '20px' }}>Perbarui data kontak dan usaha kumbung jamur Anda.</p>
+        <div className="tech-modal-overlay">
+          <motion.div 
+            className="tech-modal-card" 
+            initial={{ opacity: 0, scale: 0.95 }} 
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div className="tech-modal-header">
+              <div>
+                <h3 className="tech-modal-title">Edit Informasi Profil</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#6B7280' }}>
+                  {isTechUser 
+                    ? 'Perbarui data identitas dan kontak akun teknisi Anda.' 
+                    : isAdminUser
+                    ? 'Perbarui data identitas administrator wilayah.'
+                    : 'Perbarui data kontak dan usaha kumbung jamur Anda.'}
+                </p>
+              </div>
+              <button 
+                type="button" 
+                className="tech-modal-close-btn" 
+                onClick={() => setShowEditModal(false)}
+                aria-label="Tutup"
+              >
+                <X size={18} />
+              </button>
+            </div>
             
             <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Nama Lengkap</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Nama Lengkap</label>
                 <input 
                   type="text" 
-                  className="control-input"
+                  className="tech-form-input"
                   value={editForm.fullName} 
                   onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} 
+                  placeholder="Nama Lengkap"
                   required 
                 />
               </div>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Nomor WhatsApp / HP</label>
+
+              <div className="tech-form-group">
+                <label className="tech-form-label">Nomor WhatsApp / HP</label>
                 <input 
                   type="tel" 
-                  className="control-input"
+                  className="tech-form-input"
                   value={editForm.phoneNumber} 
                   onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })} 
+                  placeholder="08xxxxxxxxxx"
                 />
               </div>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Nama Kumbung / Usaha</label>
-                <input 
-                  type="text" 
-                  className="control-input"
-                  value={editForm.farmName} 
-                  onChange={(e) => setEditForm({ ...editForm, farmName: e.target.value })} 
-                />
-              </div>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Alamat Lokasi Kumbung</label>
-                <textarea 
-                  className="control-input"
-                  rows={2}
-                  value={editForm.farmAddress} 
-                  onChange={(e) => setEditForm({ ...editForm, farmAddress: e.target.value })} 
-                />
-              </div>
-              <div className="modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
-                <button type="button" className="secondary-button" onClick={() => setShowEditModal(false)}>Batal</button>
-                <button type="submit" className="primary-button" disabled={loading}>Simpan Perubahan</button>
+
+              {!isTechUser && !isAdminUser && (
+                <>
+                  <div className="tech-form-group">
+                    <label className="tech-form-label">Nama Kumbung / Usaha</label>
+                    <input 
+                      type="text" 
+                      className="tech-form-input"
+                      value={editForm.farmName} 
+                      onChange={(e) => setEditForm({ ...editForm, farmName: e.target.value })} 
+                      placeholder="Nama Kumbung"
+                    />
+                  </div>
+                  <div className="tech-form-group">
+                    <label className="tech-form-label">Alamat Lokasi Kumbung</label>
+                    <textarea 
+                      className="tech-form-input"
+                      rows={2}
+                      value={editForm.farmAddress} 
+                      onChange={(e) => setEditForm({ ...editForm, farmAddress: e.target.value })} 
+                      placeholder="Alamat Lokasi Kumbung"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="tech-modal-actions">
+                <button type="button" className="tech-btn-secondary" onClick={() => setShowEditModal(false)}>Batal</button>
+                <button type="submit" className="tech-btn-primary" disabled={loading}>
+                  {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
               </div>
             </form>
           </motion.div>
@@ -3585,48 +4090,71 @@ const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, devices, onL
 
       {/* Modal Ganti Password */}
       {showPasswordModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div className="modal-content panel" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '420px', padding: '24px' }}>
-            <h3 style={{ marginBottom: '8px' }}>Ganti Kata Sandi</h3>
-            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '20px' }}>Pastikan kata sandi baru Anda minimal 6 karakter.</p>
+        <div className="tech-modal-overlay">
+          <motion.div 
+            className="tech-modal-card" 
+            initial={{ opacity: 0, scale: 0.95 }} 
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div className="tech-modal-header">
+              <div>
+                <h3 className="tech-modal-title">Ganti Kata Sandi</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#6B7280' }}>
+                  Pastikan kata sandi baru Anda minimal 6 karakter.
+                </p>
+              </div>
+              <button 
+                type="button" 
+                className="tech-modal-close-btn" 
+                onClick={() => setShowPasswordModal(false)}
+                aria-label="Tutup"
+              >
+                <X size={18} />
+              </button>
+            </div>
             
             <form onSubmit={handleSavePassword} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Kata Sandi Saat Ini</label>
+              <div className="tech-form-group">
+                <label className="tech-form-label">Kata Sandi Saat Ini</label>
                 <input 
                   type="password" 
-                  className="control-input"
-                  placeholder="Masukkan password lama"
+                  className="tech-form-input"
+                  placeholder="Masukkan kata sandi lama"
                   value={passwordForm.currentPassword} 
                   onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} 
                   required 
                 />
               </div>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Kata Sandi Baru</label>
+
+              <div className="tech-form-group">
+                <label className="tech-form-label">Kata Sandi Baru</label>
                 <input 
                   type="password" 
-                  className="control-input"
-                  placeholder="Min. 6 karakter"
+                  className="tech-form-input"
+                  placeholder="Minimal 6 karakter"
                   value={passwordForm.newPassword} 
                   onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} 
                   required 
                 />
               </div>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.88rem' }}>Ulangi Kata Sandi Baru</label>
+
+              <div className="tech-form-group">
+                <label className="tech-form-label">Ulangi Kata Sandi Baru</label>
                 <input 
                   type="password" 
-                  className="control-input"
-                  placeholder="Konfirmasi password baru"
+                  className="tech-form-input"
+                  placeholder="Konfirmasi kata sandi baru"
                   value={passwordForm.confirmPassword} 
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} 
                   required 
                 />
               </div>
-              <div className="modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
-                <button type="button" className="secondary-button" onClick={() => setShowPasswordModal(false)}>Batal</button>
-                <button type="submit" className="primary-button" disabled={loading}>Ganti Password</button>
+
+              <div className="tech-modal-actions">
+                <button type="button" className="tech-btn-secondary" onClick={() => setShowPasswordModal(false)}>Batal</button>
+                <button type="submit" className="tech-btn-primary" disabled={loading}>
+                  {loading ? 'Menyimpan...' : 'Ganti Password'}
+                </button>
               </div>
             </form>
           </motion.div>
@@ -4691,6 +5219,8 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, update
 function App() {
   const [currentUser, setCurrentUser] = useState(() => api.auth.getUser());
   const [activePage, setActivePage] = useState(() => resolveInitialPage());
+  const [activeTechTab, setActiveTechTab] = useState('dashboard');
+  const [activeAdminTab, setActiveAdminTab] = useState('dashboard');
 
   const handleSetActivePage = useCallback((newPage) => {
     const storedUser = api.auth.getUser();
@@ -4749,7 +5279,11 @@ function App() {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => api.auth.isAuthenticated());
   const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    const user = api.auth.getUser();
+    const role = (user?.role || '').toUpperCase();
+    return role === 'FARMER' && Boolean(user?.mustSetupProfile || user?.nextStep === 'complete_profile' || user?.mustChangePassword || user?.profileCompleted === false);
+  });
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [viewMode, setViewMode] = useState(() => {
     if (isMobileApp()) return api.auth.isAuthenticated() ? 'app' : 'login';
@@ -4800,7 +5334,7 @@ function App() {
           setIsAuthenticated(true);
           setViewMode('app');
           const currentRole = profile?.role?.toUpperCase();
-          if (currentRole === 'FARMER' && (profile.mustSetupProfile || profile.nextStep === 'complete_profile')) {
+          if (currentRole === 'FARMER' && (profile.mustSetupProfile || profile.nextStep === 'complete_profile' || profile.mustChangePassword || profile.profileCompleted === false)) {
             setShowOnboarding(true);
           } else {
             setShowOnboarding(false);
@@ -4893,7 +5427,13 @@ function App() {
     setCurrentUser(loginResponse.user);
     setIsAuthenticated(true);
     setViewMode('app');
-    if (loginRole === 'FARMER' && (loginResponse.mustSetupProfile || loginResponse.nextStep === 'complete_profile')) {
+    const isNewFarmer = loginRole === 'FARMER' && Boolean(
+      loginResponse?.mustSetupProfile ||
+      loginResponse?.nextStep === 'complete_profile' ||
+      loginResponse?.user?.mustChangePassword ||
+      loginResponse?.user?.profileCompleted === false
+    );
+    if (isNewFarmer) {
       setShowOnboarding(true);
     } else {
       setShowOnboarding(false);
@@ -4908,13 +5448,13 @@ function App() {
     refetch();
   };
 
-
   const handleOnboardingComplete = (onboardingResponse) => {
     const updatedUser = onboardingResponse?.user 
-      ? { ...onboardingResponse.user, mustSetupProfile: false } 
-      : { ...currentUser, mustSetupProfile: false };
+      ? { ...onboardingResponse.user, mustSetupProfile: false, profileCompleted: true, mustChangePassword: false } 
+      : { ...currentUser, mustSetupProfile: false, profileCompleted: true, mustChangePassword: false };
     setCurrentUser(updatedUser);
     setShowOnboarding(false);
+    handleSetActivePage('dashboard');
     refetch();
   };
 
@@ -5021,7 +5561,7 @@ function App() {
   const userRole = (currentUser?.role || api.auth.getUser()?.role || 'FARMER').toUpperCase();
 
   // If user must setup profile (new farmer onboarding only), show dedicated full-page OnboardingScreen
-  if (userRole === 'FARMER' && (showOnboarding || currentUser?.mustSetupProfile || currentUser?.nextStep === 'complete_profile')) {
+  if (userRole === 'FARMER' && (showOnboarding || currentUser?.mustSetupProfile || currentUser?.nextStep === 'complete_profile' || currentUser?.mustChangePassword || currentUser?.profileCompleted === false)) {
     return (
       <OnboardingScreen 
         user={currentUser} 
@@ -5036,6 +5576,10 @@ function App() {
       <Sidebar 
         activePage={activePage} 
         setActivePage={handleSetActivePage} 
+        activeTechTab={activeTechTab}
+        setActiveTechTab={setActiveTechTab}
+        activeAdminTab={activeAdminTab}
+        setActiveAdminTab={setActiveAdminTab}
         isOpen={sidebarOpen}
         onClose={closeSidebar}
         currentUser={currentUser}
@@ -5053,7 +5597,12 @@ function App() {
           activePage === 'profil' ? (
             <ProfilContent onMenuToggle={toggleSidebar} currentUser={currentUser} setCurrentUser={setCurrentUser} devices={devices} onLogout={handleRequestLogout} />
           ) : (
-            <AdminDashboard onMenuToggle={toggleSidebar} currentUser={currentUser} />
+            <AdminDashboard 
+              onMenuToggle={toggleSidebar} 
+              currentUser={currentUser}
+              activeTab={activeAdminTab}
+              onTabChange={setActiveAdminTab}
+            />
           )
         )}
 
@@ -5062,13 +5611,38 @@ function App() {
           activePage === 'profil' ? (
             <ProfilContent onMenuToggle={toggleSidebar} currentUser={currentUser} setCurrentUser={setCurrentUser} devices={devices} onLogout={handleRequestLogout} />
           ) : (
-            <TechnicianDashboard onMenuToggle={toggleSidebar} currentUser={currentUser} />
+            <TechnicianDashboard 
+              onMenuToggle={toggleSidebar} 
+              currentUser={currentUser} 
+              activeTab={activeTechTab}
+              onTabChange={setActiveTechTab}
+            />
           )
         )}
 
         {/* 3. Portal Khusus Petani: Dashboard Farmer */}
         {userRole !== 'ADMIN' && userRole !== 'TECHNICIAN' && (
-          <>
+          <div className="farmer-portal-container" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%', flex: 1 }}>
+            <div className="tech-top-banner">
+              <div className="tech-breadcrumb">
+                <span>PETANI PANEL</span>
+                <ChevronRight size={12} />
+                <span className="active-crumb">
+                  {activePage === 'dashboard' && 'DASHBOARD KUMBUNG'}
+                  {activePage === 'kumbung' && 'KUMBUNG SAYA'}
+                  {activePage === 'monitoring' && 'MONITORING SENSOR'}
+                  {activePage === 'siklus' && 'SIKLUS & PANEN'}
+                  {activePage === 'kontrol' && 'KONTROL & PARAMETER'}
+                  {activePage === 'notifikasi' && 'PUSAT NOTIFIKASI'}
+                  {activePage === 'profil' && 'PROFIL PETANI'}
+                </span>
+              </div>
+              <div className="tech-server-status">
+                <div className="tech-pulse-dot" />
+                <span>Kumbung Aktif: <strong>{devices.filter(d => d.isOnline).length}/{devices.length} Online</strong></span>
+              </div>
+            </div>
+
             {activePage === 'dashboard' && <DashboardContent devices={devices} setSelectedDeviceId={setSelectedDeviceId} setActivePage={handleSetActivePage} onMenuToggle={toggleSidebar} liveSensorEvent={liveSensorEvent} liveHistoryEvent={liveHistoryEvent} />}
             {activePage === 'kumbung' && <KumbungContent setActivePage={handleSetActivePage} devices={devices} refetchDevices={refetch} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} onMenuToggle={toggleSidebar} />}
             {activePage === 'monitoring' && <MonitoringContent setActivePage={handleSetActivePage} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} selectedDevice={selectedDevice} onMenuToggle={toggleSidebar} liveSensorEvent={liveSensorEvent} liveHistoryEvent={liveHistoryEvent} />}
@@ -5076,7 +5650,7 @@ function App() {
             {activePage === 'kontrol' && <KontrolContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} updateDevice={updateDevice} onMenuToggle={toggleSidebar} />}
             {activePage === 'notifikasi' && <NotifikasiContent onMenuToggle={toggleSidebar} />}
             {activePage === 'profil' && <ProfilContent onMenuToggle={toggleSidebar} currentUser={currentUser} setCurrentUser={setCurrentUser} devices={devices} onLogout={handleRequestLogout} />}
-          </>
+          </div>
         )}
       </main>
 

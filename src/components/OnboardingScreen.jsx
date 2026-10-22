@@ -48,6 +48,14 @@ export default function OnboardingScreen({ user, onComplete, onLogout }) {
       setError('Nama lengkap petani wajib diisi.');
       return;
     }
+    if (!farmName.trim()) {
+      setError('Nama usaha / kelompok tani kumbung wajib diisi.');
+      return;
+    }
+    if (!farmAddress.trim()) {
+      setError('Alamat lengkap lokasi kumbung jamur wajib diisi.');
+      return;
+    }
 
     setLoading(true);
 
@@ -254,7 +262,7 @@ export default function OnboardingScreen({ user, onComplete, onLogout }) {
               </div>
 
               <div className="form-group" style={{ marginTop: '14px' }}>
-                <label>Nama Usaha / Kelompok Tani Kumbung</label>
+                <label>Nama Usaha / Kelompok Tani Kumbung *</label>
                 <div className="input-with-icon">
                   <Building size={18} className="input-icon" />
                   <input 
@@ -262,12 +270,13 @@ export default function OnboardingScreen({ user, onComplete, onLogout }) {
                     placeholder="Contoh: Kumbung Berkah Tiram Mandiri"
                     value={farmName}
                     onChange={(e) => setFarmName(e.target.value)}
+                    required
                   />
                 </div>
               </div>
 
               <div className="form-group" style={{ marginTop: '14px' }}>
-                <label>Alamat Lengkap Lokasi Kumbung</label>
+                <label>Alamat Lengkap Lokasi Kumbung *</label>
                 <div className="input-with-icon">
                   <MapPin size={18} className="input-icon" style={{ top: '14px' }} />
                   <textarea 
@@ -275,6 +284,7 @@ export default function OnboardingScreen({ user, onComplete, onLogout }) {
                     placeholder="Contoh: Desa Cibodas RT 03 RW 02, Kec. Lembang, Kab. Bandung Barat"
                     value={farmAddress}
                     onChange={(e) => setFarmAddress(e.target.value)}
+                    required
                   />
                 </div>
               </div>
