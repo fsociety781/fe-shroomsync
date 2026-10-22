@@ -317,7 +317,7 @@ export default function TechnicianDashboard({
 
   const onlineRate = useMemo(() => {
     const total = devices.length;
-    if (!total) return 87;
+    if (!total) return 0;
     return Math.round((onlineDevicesCount / total) * 100);
   }, [devices.length, onlineDevicesCount]);
 
@@ -326,8 +326,7 @@ export default function TechnicianDashboard({
   }, [onlineRate]);
 
   const needsUpdateCount = useMemo(() => {
-    const count = devices.filter((d) => d.firmwareVersion && d.firmwareVersion !== '2.1.0').length;
-    return count > 0 ? count : 7;
+    return devices.filter((d) => d.firmwareVersion && d.firmwareVersion !== '2.1.0').length;
   }, [devices]);
 
   const readyDevicesCount = useMemo(() => {
@@ -336,36 +335,32 @@ export default function TechnicianDashboard({
 
   // 24-Hour connectivity trend data for AreaChart
   const connectivityTrendData = useMemo(() => {
-    const total = devices.length || 128;
-    const online = onlineDevicesCount || 112;
+    const total = devices.length;
+    const online = onlineDevicesCount;
     const hours = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', 'Sekarang'];
-    const variance = [-6, -8, -10, -5, 0, 2, 4, 3, 1, -2, -3, -4, 0];
 
-    return hours.map((hour, idx) => {
-      const devOnline = Math.max(1, Math.min(total, online + variance[idx]));
-      return {
-        time: hour,
-        online: devOnline,
-        total: total,
-      };
-    });
+    return hours.map((hour) => ({
+      time: hour,
+      online: online,
+      total: total,
+    }));
   }, [devices.length, onlineDevicesCount]);
 
-  // Dynamic system alerts derived from real devices & OTA logs
+  // Dynamic system alerts derived strictly from real devices & OTA logs
   const recentAlerts = useMemo(() => {
     const list = [];
     const now = new Date();
 
     // 1. Offline devices
     const offlineList = devices.filter((d) => !d.isOnline);
-    offlineList.slice(0, 3).forEach((dev, idx) => {
+    offlineList.slice(0, 5).forEach((dev, idx) => {
       const minutesAgo = (idx + 1) * 8 + 3;
-      const eventTime = new Date(now.getTime() - minutesAgo * 60 * 1000);
+      const eventTime = dev.lastSeenAt ? new Date(dev.lastSeenAt) : new Date(now.getTime() - minutesAgo * 60 * 1000);
       list.push({
-        id: `alert-off-${dev.id}`,
+        id: `alert-off-${dev.id || dev.serialNumber}`,
         time: eventTime.toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         serial: dev.serialNumber,
-        region: dev.kumbung?.name || dev.farmer?.fullName || 'Lembang-A',
+        region: dev.kumbung?.name || dev.farmer?.fullName || dev.model || 'Node SupaKu',
         category: 'CRITICAL',
         message: `MQTT Timeout: No response for > 30 min (${dev.name || 'SupaKu Node'})`,
         device: dev,
@@ -376,64 +371,29 @@ export default function TechnicianDashboard({
     devices.forEach((dev) => {
       if (dev.rssi && Number(dev.rssi) < -80) {
         list.push({
-          id: `alert-rssi-${dev.id}`,
+          id: `alert-rssi-${dev.id || dev.serialNumber}`,
           time: new Date(now.getTime() - 25 * 60 * 1000).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
           serial: dev.serialNumber,
-          region: dev.kumbung?.name || 'Ciwidey-A',
+          region: dev.kumbung?.name || dev.farmer?.fullName || dev.model || 'Node SupaKu',
           category: 'WARNING',
-          message: `High Temp: 32.4°C detected pada sensor SHT31`,
+          message: `Sinyal lemah: RSSI ${dev.rssi} dBm terdeteksi`,
           device: dev,
         });
       }
     });
 
-    // 3. OTA logs
+    // 3. Real OTA logs
     if (otaLogs && otaLogs.length > 0) {
-      otaLogs.slice(0, 3).forEach((log) => {
+      otaLogs.slice(0, 5).forEach((log) => {
         list.push({
           id: `alert-ota-${log.id}`,
           time: new Date(log.createdAt || now).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-          serial: log.targetDevice?.serialNumber || log.serialNumber || 'SS-1001-C',
+          serial: log.targetDevice?.serialNumber || log.deviceSerialNumber || log.serialNumber || 'Unit SupaKu',
           region: 'OTA Cluster',
           category: log.status === 'SUCCESS' ? 'RESOLVED' : log.status === 'FAILED' ? 'CRITICAL' : 'INFO',
-          message: `OTA Update successful to v${log.firmwareVersion || '1.2.4'}`,
+          message: log.status === 'SUCCESS' ? `OTA Update berhasil ke v${log.firmwareVersion || '1.1.0'}` : `OTA Update gagal: ${log.notes || 'Timeout'}`,
           device: log.targetDevice,
         });
-      });
-    }
-
-    // Baseline alerts fallback exactly matching reference HTML
-    if (list.length < 3) {
-      const defaults = [
-        {
-          id: 'def-1',
-          time: '24 Mei 2026, 09:21',
-          serial: 'SS-1001-D',
-          region: 'Lembang-A',
-          category: 'CRITICAL',
-          message: 'MQTT Timeout: No response for > 30 min',
-        },
-        {
-          id: 'def-2',
-          time: '24 Mei 2026, 08:15',
-          serial: 'SS-1001-B',
-          region: 'Lembang-B',
-          category: 'WARNING',
-          message: 'High Temp: 32.4°C detected',
-        },
-        {
-          id: 'def-3',
-          time: '24 Mei 2026, 07:45',
-          serial: 'SS-1001-C',
-          region: 'Ciwidey-A',
-          category: 'RESOLVED',
-          message: 'OTA Update successful to v1.2.4',
-        },
-      ];
-      defaults.forEach((d) => {
-        if (!list.some((item) => item.id === d.id)) {
-          list.push(d);
-        }
       });
     }
 
@@ -1220,15 +1180,14 @@ export default function TechnicianDashboard({
             <div className="tech-stat-card">
               <span className="tech-stat-label">Total Perangkat</span>
               <div className="tech-stat-body">
-                <span className="tech-stat-number">{devices.length || dashboardData?.totalDevices || 128}</span>
-                <span className="tech-badge-green">+8.4%</span>
+                <span className="tech-stat-number">{devices.length}</span>
               </div>
             </div>
 
             <div className="tech-stat-card">
               <span className="tech-stat-label">Device Online</span>
               <div className="tech-stat-body">
-                <span className="tech-stat-number">{onlineDevicesCount || 112}</span>
+                <span className="tech-stat-number">{onlineDevicesCount}</span>
                 <span className="tech-badge-green">{onlineRate}% Active</span>
               </div>
             </div>
@@ -1236,7 +1195,7 @@ export default function TechnicianDashboard({
             <div className="tech-stat-card">
               <span className="tech-stat-label">Device Offline</span>
               <div className="tech-stat-body">
-                <span className="tech-stat-number">{offlineDevicesCount || 16}</span>
+                <span className="tech-stat-number">{offlineDevicesCount}</span>
                 <span className="tech-badge-red">{offlineRate}% Idle</span>
               </div>
             </div>
@@ -1291,7 +1250,7 @@ export default function TechnicianDashboard({
                       <div className="tech-legend-dot" style={{ backgroundColor: '#7B5E3C' }} />
                       <span>Operational</span>
                     </div>
-                    <span style={{ fontWeight: 700 }}>{onlineDevicesCount || 112} Unit</span>
+                    <span style={{ fontWeight: 700 }}>{onlineDevicesCount} Unit</span>
                   </div>
 
                   <div className="tech-legend-row">
@@ -1299,7 +1258,7 @@ export default function TechnicianDashboard({
                       <div className="tech-legend-dot" style={{ backgroundColor: '#E5E7EB' }} />
                       <span>Connection Lost</span>
                     </div>
-                    <span style={{ fontWeight: 700 }}>{offlineDevicesCount || 16} Unit</span>
+                    <span style={{ fontWeight: 700 }}>{offlineDevicesCount} Unit</span>
                   </div>
 
                   <div className="tech-legend-row">
@@ -1307,7 +1266,7 @@ export default function TechnicianDashboard({
                       <div className="tech-legend-dot" style={{ backgroundColor: '#6B8F71' }} />
                       <span>Ready / Unpaired</span>
                     </div>
-                    <span style={{ fontWeight: 700 }}>{readyDevicesCount || 0} Unit</span>
+                    <span style={{ fontWeight: 700 }}>{readyDevicesCount} Unit</span>
                   </div>
                 </div>
               </div>
@@ -1415,39 +1374,47 @@ export default function TechnicianDashboard({
                     </tr>
                   </thead>
                   <tbody>
-                    {recentAlerts.map((alert) => (
-                      <tr key={alert.id}>
-                        <td style={{ color: '#6B7280' }}>{alert.time}</td>
-                        <td style={{ fontWeight: 700 }}>
-                          {alert.serial}
-                          <span style={{ marginLeft: '8px', fontSize: '9px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase' }}>
-                            {alert.region}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`tech-badge-${alert.category.toLowerCase()}`}>
-                            {alert.category}
-                          </span>
-                        </td>
-                        <td style={{ color: '#4B5563' }}>{alert.message}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          <button
-                            className="tech-icon-action-btn"
-                            title="Buka Tab Terkait"
-                            onClick={() => {
-                              if (alert.device) {
-                                setEditingDevice(alert.device);
-                                setActiveTab('inventory');
-                              } else {
-                                setActiveTab('diagnostics');
-                              }
-                            }}
-                          >
-                            <ExternalLink size={15} />
-                          </button>
+                    {recentAlerts.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: 'center', padding: '36px 16px', color: '#9CA3AF', fontSize: '13px' }}>
+                          Tidak ada peringatan sistem saat ini. Semua perangkat beroperasi normal.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      recentAlerts.map((alert) => (
+                        <tr key={alert.id}>
+                          <td style={{ color: '#6B7280' }}>{alert.time}</td>
+                          <td style={{ fontWeight: 700 }}>
+                            {alert.serial}
+                            <span style={{ marginLeft: '8px', fontSize: '9px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase' }}>
+                              {alert.region}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`tech-badge-${alert.category.toLowerCase()}`}>
+                              {alert.category}
+                            </span>
+                          </td>
+                          <td style={{ color: '#4B5563' }}>{alert.message}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              className="tech-icon-action-btn"
+                              title="Buka Tab Terkait"
+                              onClick={() => {
+                                if (alert.device) {
+                                  setEditingDevice(alert.device);
+                                  setActiveTab('inventory');
+                                } else {
+                                  setActiveTab('diagnostics');
+                                }
+                              }}
+                            >
+                              <ExternalLink size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

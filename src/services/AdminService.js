@@ -12,47 +12,8 @@ const buildQuery = (params = {}) => {
   return query ? `?${query}` : '';
 };
 
-// Fallback initial farmers data for development/demo
-const DEFAULT_FARMERS = [
-  {
-    id: 'farmer-001',
-    fullName: 'Budi Santoso',
-    phoneNumber: '081234567890',
-    email: 'budi.santoso@gmail.com',
-    farmName: 'Kumbung Berkah Lembang',
-    farmAddress: 'Desa Kayuambon, Kec. Lembang, Kab. Bandung Barat',
-    status: 'ACTIVE',
-    devices: [
-      { id: 'SS-0426-001', deviceId: 'SS-0426-001', name: 'Kumbung Tiram A', isOnline: true },
-      { id: 'SS-0426-002', deviceId: 'SS-0426-002', name: 'Kumbung Tiram B', isOnline: true },
-    ],
-    createdAt: '2026-01-10T08:00:00.000Z',
-  },
-  {
-    id: 'farmer-002',
-    fullName: 'Ahmad Supardi',
-    phoneNumber: '085723456781',
-    email: 'ahmad.supardi@yahoo.com',
-    farmName: 'Agro Jamur Sukamaju',
-    farmAddress: 'Cisarua, Kec. Cisarua, Kab. Bandung Barat',
-    status: 'ACTIVE',
-    devices: [
-      { id: 'SS-0426-003', deviceId: 'SS-0426-003', name: 'Kumbung Utama', isOnline: false },
-    ],
-    createdAt: '2026-02-14T09:30:00.000Z',
-  },
-  {
-    id: 'farmer-003',
-    fullName: 'Suryadi Pratama',
-    phoneNumber: '081398765432',
-    email: 'suryadi@jamurindonesia.id',
-    farmName: 'Kumbung Hijau Ciwidey',
-    farmAddress: 'Jl. Raya Ciwidey No. 45, Kab. Bandung',
-    status: 'PENDING_ONBOARDING',
-    devices: [],
-    createdAt: '2026-03-20T11:15:00.000Z',
-  },
-];
+// Production mode: fallback initial farmers data is empty
+const DEFAULT_FARMERS = [];
 
 class AdminService {
   /**

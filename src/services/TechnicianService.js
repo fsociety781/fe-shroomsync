@@ -12,58 +12,24 @@ const buildQuery = (params = {}) => {
   return query ? `?${query}` : '';
 };
 
-// Mock data generator for fallback in case backend technician route is not yet populated
+// Production mode: empty fallback
 const createFallbackDashboard = (devices = []) => {
-  const total = devices.length || 6;
-  const active = devices.filter((d) => d.isOnline).length || 4;
-  const offline = total - active;
+  const total = devices.length;
+  const active = devices.filter((d) => d.isOnline).length;
+  const offline = Math.max(0, total - active);
 
   return {
     totalDevices: total,
     activeDevices: active,
     offlineDevices: offline,
-    totalAdmins: 3,
-    systemUptime: '99.8%',
+    totalAdmins: 0,
+    systemUptime: '100%',
     mqttStatus: 'CONNECTED',
-    hardwareBreakdown: [
-      { version: 'SupaKu Node v2.0', count: Math.ceil(total * 0.65), firmware: 'v2.1.0' },
-      { version: 'SupaKu Node v1.2', count: Math.floor(total * 0.35), firmware: 'v2.0.4' },
-    ],
+    hardwareBreakdown: [],
   };
 };
 
-const DEFAULT_ADMINS = [
-  {
-    id: 'adm-001',
-    fullName: 'Bambang Sudiro',
-    phoneNumber: '081234567891',
-    email: 'admin.jawabarat@shroomsync.id',
-    region: 'Jawa Barat (Lembang & Sukabumi)',
-    status: 'ACTIVE',
-    createdAt: '2026-02-15T08:00:00.000Z',
-    assignedFarmersCount: 14,
-  },
-  {
-    id: 'adm-002',
-    fullName: 'Siti Rahmawati',
-    phoneNumber: '081987654321',
-    email: 'admin.jawatengah@shroomsync.id',
-    region: 'Jawa Tengah (Kopeng & Magelang)',
-    status: 'ACTIVE',
-    createdAt: '2026-03-01T09:30:00.000Z',
-    assignedFarmersCount: 9,
-  },
-  {
-    id: 'adm-003',
-    fullName: 'Eko Prasetyo',
-    phoneNumber: '085712349876',
-    email: 'admin.malang@shroomsync.id',
-    region: 'Jawa Timur (Malang & Batu)',
-    status: 'SUSPENDED',
-    createdAt: '2026-04-10T14:15:00.000Z',
-    assignedFarmersCount: 0,
-  },
-];
+const DEFAULT_ADMINS = [];
 
 class TechnicianService {
   /**
