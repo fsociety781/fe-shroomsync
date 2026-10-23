@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, 
@@ -14,11 +14,26 @@ import {
   Thermometer, 
   CalendarDays, 
   Layers,
-  RadioTower
+  RadioTower,
+  Sun,
+  Moon
 } from 'lucide-react';
 import './LandingPage.css';
 
 export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthenticated }) {
+  // State Tema Tampilan (Default ke 'dark' sesuai permintaan user)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('shroomsync_lp_theme') || 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('shroomsync_lp_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // State Simulasi Iklim Mikro Interaktif di Hero
   const [simTemp, setSimTemp] = useState(25.5);
   const [simHumid, setSimHumid] = useState(86);
@@ -43,15 +58,17 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
     return simTemp > 27.5;
   }, [simTemp]);
 
+  const isDark = theme === 'dark';
+
   const climateStatus = useMemo(() => {
     if (simTemp >= 24 && simTemp <= 27 && simHumid >= 80 && simHumid <= 92) {
-      return { text: 'Optimal untuk Tiram', color: '#4ade80', score: 98 };
+      return { text: 'Optimal untuk Tiram', color: isDark ? '#4ADE80' : '#15803D', score: 98 };
     }
     if (simTemp > 28 || simHumid < 75) {
-      return { text: 'Waspada: Panas / Kering', color: '#f87171', score: 64 };
+      return { text: 'Waspada: Panas / Kering', color: isDark ? '#F87171' : '#DC2626', score: 64 };
     }
-    return { text: 'Kondisi Menengah', color: '#facc15', score: 82 };
-  }, [simTemp, simHumid]);
+    return { text: 'Kondisi Menengah', color: isDark ? '#FBBF24' : '#B45309', score: 82 };
+  }, [simTemp, simHumid, isDark]);
 
   // Kalkulasi Hasil Panen
   const calcResults = useMemo(() => {
@@ -103,7 +120,7 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
   ];
 
   return (
-    <div className="landing-page">
+    <div className={`landing-page ${isDark ? 'dark-theme' : 'light-theme'}`} data-theme={theme}>
       {/* Background Ambient Lighting */}
       <div className="landing-ambient-bg">
         <div className="ambient-orb ambient-orb-1" />
@@ -136,6 +153,14 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
           </ul>
 
           <div className="lp-nav-cta">
+            <button 
+              className="lp-theme-toggle-btn" 
+              onClick={toggleTheme} 
+              aria-label="Toggle Dark/Light Mode"
+              title={isDark ? 'Ganti ke Mode Terang (Light)' : 'Ganti ke Mode Gelap (Dark)'}
+            >
+              {isDark ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
             {isAuthenticated ? (
               <button className="lp-btn-login" onClick={onGoToDashboard}>
                 <Layers size={16} />
@@ -240,10 +265,10 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
                 <div className="lp-sim-gauge-box">
                   <div className="lp-sim-gauge-top">
                     <span>Suhu Ruang</span>
-                    <Thermometer size={16} color="#f87171" />
+                    <Thermometer size={16} color={isDark ? '#F87171' : '#DC2626'} />
                   </div>
                   <div className="lp-sim-gauge-val">{simTemp.toFixed(1)}°C</div>
-                  <div className="lp-sim-gauge-status" style={{ color: simTemp > 28 ? '#f87171' : '#4ade80' }}>
+                  <div className="lp-sim-gauge-status" style={{ color: simTemp > 28 ? (isDark ? '#F87171' : '#DC2626') : (isDark ? '#4ADE80' : '#15803D') }}>
                     {simTemp > 28 ? 'Perhatian: Suhu Terlalu Panas' : 'Optimal: Rentang Sejuk Ideal'}
                   </div>
                 </div>
@@ -251,10 +276,10 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
                 <div className="lp-sim-gauge-box">
                   <div className="lp-sim-gauge-top">
                     <span>Kelembaban Udara</span>
-                    <Droplets size={16} color="#38bdf8" />
+                    <Droplets size={16} color={isDark ? '#38BDF8' : '#0284C7'} />
                   </div>
                   <div className="lp-sim-gauge-val">{simHumid}%</div>
-                  <div className="lp-sim-gauge-status" style={{ color: simHumid < 80 ? '#f87171' : '#4ade80' }}>
+                  <div className="lp-sim-gauge-status" style={{ color: simHumid < 80 ? (isDark ? '#F87171' : '#DC2626') : (isDark ? '#4ADE80' : '#15803D') }}>
                     {simHumid < 80 ? 'Perhatian: Kurang Lembab' : 'Optimal: Kelembaban Sangat Baik'}
                   </div>
                 </div>
@@ -297,7 +322,7 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
                   className="lp-sim-range-input"
                 />
 
-                <div className="lp-sim-slider-label" style={{ marginTop: '12px' }}>
+                <div className="lp-sim-slider-label" style={{ marginTop: '8px' }}>
                   <span>Geser Simulasi Kelembaban:</span>
                   <strong>{simHumid}%</strong>
                 </div>
@@ -338,24 +363,24 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
               </div>
               <div>
                 <h3>Metode Kumbung Tradisional</h3>
-                <span style={{ fontSize: '0.78rem', color: '#f87171' }}>Rentan Gagal & Boros Tenaga</span>
+                <span style={{ fontSize: '0.78rem', color: isDark ? '#F87171' : '#DC2626', fontWeight: 600 }}>Rentan Gagal & Boros Tenaga</span>
               </div>
             </div>
             <ul className="lp-comparison-list">
               <li className="lp-comparison-item">
-                <XCircle size={18} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
+                <XCircle size={18} style={{ color: isDark ? '#F87171' : '#DC2626', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Penyemprotan Manual Kasar:</strong> Petani menyiram memakai selang secara manual yang sering membuat baglog terlalu basah atau busuk.</div>
               </li>
               <li className="lp-comparison-item">
-                <XCircle size={18} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
+                <XCircle size={18} style={{ color: isDark ? '#F87171' : '#DC2626', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Kondisi Malam Hari Tak Terpantau:</strong> Suhu dingin ekstrem atau kering dini hari tidak tertangani karena petani sedang tidur.</div>
               </li>
               <li className="lp-comparison-item">
-                <XCircle size={18} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
+                <XCircle size={18} style={{ color: isDark ? '#F87171' : '#DC2626', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Catatan Panen di Kertas:</strong> Buku catatan mudah basah, hilang, dan menyulitkan evaluasi efisiensi bobot panen (BER).</div>
               </li>
               <li className="lp-comparison-item">
-                <XCircle size={18} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
+                <XCircle size={18} style={{ color: isDark ? '#F87171' : '#DC2626', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Petani Terikat di Lokasi:</strong> Tidak bisa bepergian jauh karena harus selalu memeriksa kelembaban kumbung.</div>
               </li>
             </ul>
@@ -369,24 +394,24 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
               </div>
               <div>
                 <h3>Solusi Cerdas ShroomSync</h3>
-                <span style={{ fontSize: '0.78rem', color: '#4ade80' }}>Otomatis, Presisi & Terhubung</span>
+                <span style={{ fontSize: '0.78rem', color: isDark ? '#4ADE80' : '#15803D', fontWeight: 600 }}>Otomatis, Presisi & Terhubung</span>
               </div>
             </div>
             <ul className="lp-comparison-list">
               <li className="lp-comparison-item">
-                <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0, marginTop: '2px' }} />
+                <CheckCircle2 size={18} style={{ color: isDark ? '#4ADE80' : '#15803D', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Otomasi Kabut Mikro Presisi:</strong> Nozel kabut menyala otomatis dalam hitungan detik saat kelembaban turun di bawah 80%.</div>
               </li>
               <li className="lp-comparison-item">
-                <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0, marginTop: '2px' }} />
+                <CheckCircle2 size={18} style={{ color: isDark ? '#4ADE80' : '#15803D', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Monitoring 24/7 Tanpa Henti:</strong> Sensor membaca suhu & kelembaban setiap waktu dan memicu exhaust fan saat udara panas.</div>
               </li>
               <li className="lp-comparison-item">
-                <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0, marginTop: '2px' }} />
+                <CheckCircle2 size={18} style={{ color: isDark ? '#4ADE80' : '#15803D', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Rekap Panen & Batch Digital:</strong> Pelacakan fase baglog dari inokulasi hingga flushes panen dengan grafik analitik.</div>
               </li>
               <li className="lp-comparison-item">
-                <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0, marginTop: '2px' }} />
+                <CheckCircle2 size={18} style={{ color: isDark ? '#4ADE80' : '#15803D', flexShrink: 0, marginTop: '2px' }} />
                 <div><strong>Kendali Jarak Jauh via Smartphone:</strong> Pantau kondisi kumbung dan nyalakan pompa dari mana saja melalui HP Android Anda.</div>
               </li>
             </ul>
@@ -582,7 +607,7 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
             </div>
             <div className="lp-calc-metric-row">
               <span className="lp-calc-metric-label">Estimasi Panen ShroomSync (+37%)</span>
-              <span className="lp-calc-metric-val" style={{ color: '#4ade80' }}>
+              <span className="lp-calc-metric-val" style={{ color: isDark ? '#4ADE80' : '#15803D' }}>
                 {calcResults.shroomSyncKg.toLocaleString('id-ID')} Kg
               </span>
             </div>
@@ -625,7 +650,7 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthentica
                   style={{ 
                     transform: activeFaq === idx ? 'rotate(180deg)' : 'rotate(0deg)',
                     transition: 'transform 0.2s ease',
-                    color: activeFaq === idx ? 'var(--lp-primary-light)' : 'var(--lp-text-muted)'
+                    color: activeFaq === idx ? (isDark ? 'var(--lp-sage)' : 'var(--lp-primary)') : 'var(--lp-text-muted)'
                   }} 
                 />
               </div>
