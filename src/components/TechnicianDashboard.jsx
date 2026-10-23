@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Wrench,
   Cpu,
   Radio,
-  ShieldCheck,
   CheckCircle2,
   AlertTriangle,
   RefreshCw,
@@ -29,21 +27,15 @@ import {
   HardDrive,
   History,
   Clock,
-  LayoutDashboard,
   ChevronRight,
-  Calendar,
-  ArrowUpRight,
   ExternalLink,
   Activity,
-  Info,
-  Server,
-  Layers,
   Phone,
   Mail,
   Sprout,
   Sparkles,
-  Building,
-  MapPin,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../services/api';
@@ -58,13 +50,14 @@ export default function TechnicianDashboard({
   currentUser,
   activeTab: controlledTab,
   onTabChange,
+  theme,
+  toggleTheme,
 }) {
   const [internalTab, setInternalTab] = useState('dashboard');
   const activeTab = controlledTab ?? internalTab;
   const setActiveTab = onTabChange ?? setInternalTab;
   const [timeRange, setTimeRange] = useState('7 Hari Terakhir');
   const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState(null);
   const [devices, setDevices] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [farmers, setFarmers] = useState([]);
@@ -233,16 +226,12 @@ export default function TechnicianDashboard({
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [dashRes, devRes, adminRes, farmerRes] = await Promise.allSettled([
-        api.technician.getDashboard(),
+      const [devRes, adminRes, farmerRes] = await Promise.allSettled([
         api.technician.getDevices({ status: statusFilter, limit: 100 }),
         api.technician.getAdmins(),
         api.technician.getFarmers(),
       ]);
 
-      if (dashRes.status === 'fulfilled') {
-        setDashboardData(dashRes.value);
-      }
       if (devRes.status === 'fulfilled') {
         const devList = devRes.value?.devices || (Array.isArray(devRes.value) ? devRes.value : []);
         setDevices(devList);
@@ -420,21 +409,22 @@ export default function TechnicianDashboard({
   };
 
   const getTabSubtitle = (tab) => {
+    const sessionPrefix = currentUser?.fullName ? `Sesi: ${currentUser.fullName} • ` : '';
     switch (tab) {
       case 'dashboard':
-        return 'Pemantauan infrastruktur IoT ShroomSync global.';
+        return `${sessionPrefix}Pemantauan infrastruktur IoT ShroomSync global.`;
       case 'inventory':
-        return 'Inventarisasi, pendaftaran, dan provisioning unit hardware SupaKu IoT.';
+        return `${sessionPrefix}Inventarisasi, pendaftaran, dan provisioning unit hardware SupaKu IoT.`;
       case 'ota':
-        return 'Pusat rilis binary firmware dan distribusi OTA update nirkabel.';
+        return `${sessionPrefix}Pusat rilis binary firmware dan distribusi OTA update nirkabel.`;
       case 'admins':
-        return 'Pengelolaan hak akses administrator wilayah dan petani binaan regional.';
+        return `${sessionPrefix}Pengelolaan hak akses administrator wilayah dan petani binaan regional.`;
       case 'logs':
-        return 'Riwayat aktivitas perangkat, log firmware OTA, dan audit trail sistem.';
+        return `${sessionPrefix}Riwayat aktivitas perangkat, log firmware OTA, dan audit trail sistem.`;
       case 'diagnostics':
-        return 'Inspeksi telemetri real-time, broker MQTT heartbeat, dan status server.';
+        return `${sessionPrefix}Inspeksi telemetri real-time, broker MQTT heartbeat, dan status server.`;
       default:
-        return 'Pemantauan infrastruktur IoT ShroomSync global.';
+        return `${sessionPrefix}Pemantauan infrastruktur IoT ShroomSync global.`;
     }
   };
 
@@ -1011,6 +1001,21 @@ export default function TechnicianDashboard({
             <Radio size={13} style={{ color: '#86efac' }} />
             <span>MQTT Broker: Connected</span>
           </span>
+          {toggleTheme && (
+            <>
+              <span style={{ opacity: 0.4 }}>•</span>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="tech-theme-toggle-btn"
+                title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                aria-label="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun size={13} style={{ color: '#FBBF24' }} /> : <Moon size={13} style={{ color: '#E5E7EB' }} />}
+                <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -1024,11 +1029,11 @@ export default function TechnicianDashboard({
               onClick={onMenuToggle}
               className="mobile-menu-toggle"
               style={{
-                background: 'white',
-                border: '1px solid #E5E7EB',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '10px',
                 padding: '8px',
-                color: '#374151',
+                color: 'var(--text-primary)',
                 cursor: 'pointer',
               }}
               aria-label="Toggle Navigation Menu"
@@ -1221,7 +1226,7 @@ export default function TechnicianDashboard({
                       cx="90"
                       cy="90"
                       r="64"
-                      stroke="#F3F4F6"
+                      stroke="var(--tech-soft-beige)"
                       strokeWidth="16"
                       fill="none"
                     />
@@ -1229,7 +1234,7 @@ export default function TechnicianDashboard({
                       cx="90"
                       cy="90"
                       r="64"
-                      stroke="#7B5E3C"
+                      stroke="var(--tech-earth-brown)"
                       strokeWidth="16"
                       strokeDasharray={402.12}
                       strokeDashoffset={402.12 * (1 - onlineRate / 100)}
@@ -1383,10 +1388,10 @@ export default function TechnicianDashboard({
                     ) : (
                       recentAlerts.map((alert) => (
                         <tr key={alert.id}>
-                          <td style={{ color: '#6B7280' }}>{alert.time}</td>
-                          <td style={{ fontWeight: 700 }}>
+                          <td style={{ color: 'var(--tech-text-muted)' }}>{alert.time}</td>
+                          <td style={{ fontWeight: 700, color: 'var(--tech-text-primary)' }}>
                             {alert.serial}
-                            <span style={{ marginLeft: '8px', fontSize: '9px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase' }}>
+                            <span style={{ marginLeft: '8px', fontSize: '9px', fontWeight: 600, color: 'var(--tech-text-muted)', textTransform: 'uppercase' }}>
                               {alert.region}
                             </span>
                           </td>
@@ -1395,7 +1400,7 @@ export default function TechnicianDashboard({
                               {alert.category}
                             </span>
                           </td>
-                          <td style={{ color: '#4B5563' }}>{alert.message}</td>
+                          <td style={{ color: 'var(--tech-text-secondary)' }}>{alert.message}</td>
                           <td style={{ textAlign: 'center' }}>
                             <button
                               className="tech-icon-action-btn"
@@ -1500,16 +1505,16 @@ export default function TechnicianDashboard({
 
                     return (
                       <tr key={dev.id || dev.serialNumber}>
-                        <td style={{ fontWeight: 800, fontFamily: 'monospace', color: '#7B5E3C' }}>
+                        <td style={{ fontWeight: 800, fontFamily: 'monospace', color: 'var(--tech-earth-brown)' }}>
                           {dev.serialNumber}
                         </td>
                         <td>
-                          <div style={{ fontWeight: 700, color: '#111827' }}>{dev.name || dev.serialNumber}</div>
-                          <div style={{ fontSize: '0.76rem', color: '#6B7280' }}>{dev.model || 'SupaKu Smart Node v2'}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{dev.name || dev.serialNumber}</div>
+                          <div style={{ fontSize: '0.76rem', color: 'var(--tech-text-muted)' }}>{dev.model || 'SupaKu Smart Node v2'}</div>
                         </td>
                         <td>
-                          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151' }}>Board: v{dev.hardwareVersion || '2.0'}</div>
-                          <div style={{ fontSize: '0.74rem', color: '#9CA3AF' }}>FW: v{dev.firmwareVersion || '2.1.0'}</div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--tech-text-secondary)' }}>Board: v{dev.hardwareVersion || '2.0'}</div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--tech-text-muted)' }}>FW: v{dev.firmwareVersion || '2.1.0'}</div>
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <span className={statusBadgeClass}>
@@ -1524,7 +1529,7 @@ export default function TechnicianDashboard({
 
                             if (!hasFarmer && !hasCustomName) {
                               return (
-                                <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontSize: '0.8rem' }}>
+                                <span style={{ color: 'var(--tech-text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>
                                   Belum Ditautkan
                                 </span>
                               );
@@ -1532,14 +1537,14 @@ export default function TechnicianDashboard({
 
                             return (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.86rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.86rem' }}>
                                   {hasCustomName ? dev.name : (farmerName || 'Petani Terdaftar')}
                                 </div>
-                                <div style={{ fontSize: '0.76rem', color: '#6B7280' }}>
+                                <div style={{ fontSize: '0.76rem', color: 'var(--tech-text-muted)' }}>
                                   {farmerName || 'Petani Terdaftar'}
                                 </div>
                                 {dev.farmer?.phoneNumber && (
-                                  <div style={{ fontSize: '0.74rem', color: '#6B8F71', fontWeight: 600 }}>
+                                  <div style={{ fontSize: '0.74rem', color: 'var(--tech-sage-green)', fontWeight: 600 }}>
                                     {dev.farmer.phoneNumber}
                                   </div>
                                 )}
@@ -1548,8 +1553,8 @@ export default function TechnicianDashboard({
                           })()}
                         </td>
                         <td style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#4B5563', fontWeight: 500 }}>
-                            <Wifi size={13} style={{ color: isOnline ? '#16A34A' : '#9CA3AF' }} />
+                          <div style={{ fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--tech-text-secondary)', fontWeight: 500 }}>
+                            <Wifi size={13} style={{ color: isOnline ? '#16A34A' : 'var(--tech-text-muted)' }} />
                             <span>{isOnline ? (dev.rssiDbm ? `${dev.rssiDbm} dBm` : '-64 dBm') : '--'}</span>
                           </div>
                         </td>
@@ -1679,7 +1684,7 @@ export default function TechnicianDashboard({
                               {farmer.fullName?.charAt(0) || 'P'}
                             </div>
                             <div>
-                              <div style={{ fontWeight: 800, color: '#111827', fontSize: '0.9rem' }}>
+                              <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                                 {farmer.fullName || 'Petani Belum Bernama'}
                               </div>
                               <div style={{ fontSize: '0.74rem', color: '#6B7280' }}>
@@ -1689,7 +1694,7 @@ export default function TechnicianDashboard({
                           </div>
                         </td>
                         <td>
-                          <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#111827' }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                             {farmer.phoneNumber}
                           </div>
                           <div style={{ fontSize: '0.74rem', color: '#6B7280' }}>
@@ -1697,7 +1702,7 @@ export default function TechnicianDashboard({
                           </div>
                         </td>
                         <td>
-                          <div style={{ fontSize: '0.84rem', fontWeight: 700, color: farmer.farmName ? '#111827' : '#9CA3AF' }}>
+                          <div style={{ fontSize: '0.84rem', fontWeight: 700, color: farmer.farmName ? 'var(--text-primary)' : '#9CA3AF' }}>
                             {farmer.farmName || 'Belum diisi petani'}
                           </div>
                         </td>
@@ -1707,7 +1712,7 @@ export default function TechnicianDashboard({
                           </div>
                         </td>
                         <td>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#7B5E3C', backgroundColor: '#F5EFE6', padding: '3px 8px', borderRadius: '6px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--tech-earth-brown)', backgroundColor: 'var(--tech-soft-beige)', padding: '3px 8px', borderRadius: '6px' }}>
                             {farmer._count?.devices ?? (farmer.devices?.length || 0)} Unit
                           </span>
                         </td>
@@ -1740,7 +1745,7 @@ export default function TechnicianDashboard({
                       <tr>
                         <td colSpan="7" style={{ textAlign: 'center', padding: '40px 16px', color: '#9CA3AF' }}>
                           <Sprout size={32} style={{ margin: '0 auto 8px', opacity: 0.4, display: 'block' }} />
-                          <div style={{ fontWeight: 700, color: '#4B5563', marginBottom: '4px' }}>Belum Ada Petani Terdaftar</div>
+                          <div style={{ fontWeight: 700, color: 'var(--tech-text-primary)', marginBottom: '4px' }}>Belum Ada Petani Terdaftar</div>
                           <div style={{ fontSize: '0.8rem' }}>Klik tombol "Daftarkan Petani Baru" di atas untuk menambahkan akun petani.</div>
                         </td>
                       </tr>
@@ -1781,7 +1786,7 @@ export default function TechnicianDashboard({
                             {admin.fullName?.charAt(0) || 'A'}
                           </div>
                           <div>
-                            <div style={{ fontWeight: 800, fontSize: '0.96rem', color: '#111827' }}>{admin.fullName}</div>
+                            <div style={{ fontWeight: 800, fontSize: '0.96rem', color: 'var(--text-primary)' }}>{admin.fullName}</div>
                             <div style={{ fontSize: '0.76rem', color: '#6B7280', fontWeight: 600 }}>{admin.region || 'Regional Indonesia'}</div>
                           </div>
                         </div>
@@ -1791,23 +1796,23 @@ export default function TechnicianDashboard({
                         </span>
                       </div>
 
-                      <div style={{ fontSize: '0.82rem', color: '#4B5563', lineHeight: '1.7', marginBottom: '16px', backgroundColor: '#F9FAFB', padding: '12px 14px', borderRadius: '12px', border: '1px solid #F3F4F6' }}>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.7', marginBottom: '16px', backgroundColor: 'var(--bg-tertiary)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Phone size={13} style={{ color: '#7B5E3C' }} />
+                          <Phone size={13} style={{ color: 'var(--earth-brown)' }} />
                           <span>{admin.phoneNumber}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Mail size={13} style={{ color: '#7B5E3C' }} />
+                          <Mail size={13} style={{ color: 'var(--earth-brown)' }} />
                           <span>{admin.email || 'Email belum diatur'}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Users size={13} style={{ color: '#7B5E3C' }} />
-                          <span style={{ fontWeight: 700, color: '#111827' }}>{admin.assignedFarmersCount ?? 0} Petani Terdaftar</span>
+                          <Users size={13} style={{ color: 'var(--earth-brown)' }} />
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{admin.assignedFarmersCount ?? 0} Petani Terdaftar</span>
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                       <button
                         className="tech-btn-secondary"
                         onClick={() => handleToggleAdminStatus(admin)}
@@ -1871,7 +1876,7 @@ export default function TechnicianDashboard({
                   <HardDrive size={18} />
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#111827' }}>Repositori File Biner Firmware (.bin)</h4>
+                  <h4 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-primary)' }}>Repositori File Biner Firmware (.bin)</h4>
                   <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
                     File binary yang telah diverifikasi dan siap di-flash ke unit mikrokontroler SupaKu ESP32
                   </div>
@@ -1887,7 +1892,7 @@ export default function TechnicianDashboard({
             ) : firmwares.length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9CA3AF' }}>
                 <FileCode size={36} style={{ opacity: 0.4, marginBottom: '10px' }} />
-                <div style={{ fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
                   Belum ada file firmware (.bin) tersimpan
                 </div>
                 <div style={{ fontSize: '0.82rem', maxWidth: '420px', margin: '0 auto 16px auto' }}>
@@ -1926,7 +1931,7 @@ export default function TechnicianDashboard({
                       >
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#111827' }}>v{fw.version}</span>
+                            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>v{fw.version}</span>
                             {fw.isLatest && (
                               <span className="tech-badge-active" style={{ fontSize: '9px', padding: '1px 6px' }}>
                                 LATEST
@@ -1935,12 +1940,12 @@ export default function TechnicianDashboard({
                           </div>
                         </td>
                         <td>
-                          <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.76rem', backgroundColor: '#F3F4F6', color: '#374151', fontWeight: 600 }}>
+                          <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.76rem', backgroundColor: 'var(--tech-soft-beige)', color: 'var(--tech-text-secondary)', fontWeight: 600 }}>
                             SupaKu ESP32 v{fw.hardwareVersion || '1.0'}
                           </span>
                         </td>
                         <td>
-                          <div style={{ fontWeight: 700, color: '#111827' }}>{fw.originalName}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{fw.originalName}</div>
                           <div style={{ fontSize: '0.74rem', color: '#6B7280' }}>{formatBytes(fw.fileSize)}</div>
                         </td>
                         <td style={{ padding: '12px 16px' }}>
@@ -2271,7 +2276,7 @@ export default function TechnicianDashboard({
                   <History size={18} />
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#111827' }}>Riwayat Eksekusi Flashing OTA</h4>
+                  <h4 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-primary)' }}>Riwayat Eksekusi Flashing OTA</h4>
                   <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
                     Log riwayat pengiriman instruksi upgrade dan status konfirmasi firmware dari unit SupaKu
                   </div>
@@ -2351,7 +2356,7 @@ export default function TechnicianDashboard({
                               {log.status}
                             </span>
                           </td>
-                          <td style={{ color: '#4B5563' }}>
+                          <td style={{ color: 'var(--tech-text-secondary)' }}>
                             <div style={{ fontSize: '0.8rem' }}>{log.notes || '-'}</div>
                             {Boolean(log.firmwareUrl) && (
                               <div style={{ fontSize: '0.72rem', color: '#9CA3AF', marginTop: '2px', wordBreak: 'break-all' }}>
@@ -2457,7 +2462,7 @@ export default function TechnicianDashboard({
                               {log.status}
                             </span>
                           </td>
-                          <td style={{ color: '#4B5563' }}>
+                          <td style={{ color: 'var(--tech-text-secondary)' }}>
                             <div style={{ fontSize: '0.8rem' }}>{log.notes || '-'}</div>
                             {Boolean(log.firmwareUrl) && (
                               <div style={{ fontSize: '0.72rem', color: '#9CA3AF', marginTop: '2px', wordBreak: 'break-all' }}>
@@ -2878,7 +2883,7 @@ export default function TechnicianDashboard({
           <motion.div className="tech-modal-card" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '480px', maxWidth: '92vw', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#F5EFE6', color: '#7B5E3C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--tech-soft-beige)', color: 'var(--tech-earth-brown)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Sprout size={18} />
                 </div>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>Daftarkan Akun Petani Baru</h3>
@@ -2888,7 +2893,7 @@ export default function TechnicianDashboard({
               </button>
             </div>
 
-            <div style={{ backgroundColor: '#F5EFE6', border: '1px solid rgba(123, 94, 60, 0.25)', borderRadius: '12px', padding: '10px 14px', fontSize: '0.8rem', color: '#7B5E3C', lineHeight: '1.5', margin: '12px 0 16px' }}>
+            <div style={{ backgroundColor: 'var(--tech-soft-beige)', border: '1px solid var(--tech-border)', borderRadius: '12px', padding: '10px 14px', fontSize: '0.8rem', color: 'var(--tech-earth-brown)', lineHeight: '1.5', margin: '12px 0 16px' }}>
               <div style={{ fontWeight: 800, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Sparkles size={14} />
                 <span>Onboarding Mandiri Petani</span>

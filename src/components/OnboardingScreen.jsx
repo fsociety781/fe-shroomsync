@@ -11,11 +11,13 @@ import {
   ArrowRight,
   LogOut,
   Eye,
-  EyeOff
+  EyeOff,
+  Sun,
+  Moon
 } from 'lucide-react';
 import api, { APIError } from '../services/api';
 
-export default function OnboardingScreen({ user, onComplete, onLogout }) {
+export default function OnboardingScreen({ user, onComplete, onLogout, theme, toggleTheme }) {
   const [currentPassword, setCurrentPassword] = useState('PasswordDefault123!');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -105,7 +107,19 @@ export default function OnboardingScreen({ user, onComplete, onLogout }) {
           <span className="onboarding-topbar__title">ShroomSync</span>
         </div>
 
-        <div className="onboarding-topbar__user">
+        <div className="onboarding-topbar__user" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {toggleTheme && (
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="onboarding-topbar__logout-btn"
+              title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              {theme === 'dark' ? <Sun size={15} style={{ color: '#FBBF24' }} /> : <Moon size={15} style={{ color: '#4B5563' }} />}
+              <span>{theme === 'dark' ? 'Terang' : 'Gelap'}</span>
+            </button>
+          )}
           <span className="onboarding-topbar__chip">
             <User size={14} className="text-sage" />
             <span>{user?.username || 'petani_baru'}</span>

@@ -10,7 +10,7 @@
 .portal-tabs {
   display: flex;
   gap: 10px;
-  border-bottom: 1px solid #E5E7EB;
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 14px;
   margin-bottom: 20px;
   overflow-x: auto;
@@ -20,9 +20,9 @@
 .portal-tab-btn {
   padding: 10px 20px;
   border-radius: 12px;
-  border: 1px solid #E5E7EB;
-  background: #FFFFFF;
-  color: #4B5563;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   font-weight: 700;
   font-size: 0.86rem;
   cursor: pointer;
@@ -31,21 +31,21 @@
   gap: 8px;
   white-space: nowrap;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 .portal-tab-btn:hover {
-  background: #FDFBF7;
-  border-color: rgba(123, 94, 60, 0.3);
-  color: #7B5E3C;
+  background: var(--bg-tertiary);
+  border-color: var(--border-color-strong);
+  color: var(--sage-green);
   transform: translateY(-1px);
 }
 
 .portal-tab-btn.active {
-  border-color: #7B5E3C;
-  background: #7B5E3C;
+  border-color: var(--earth-brown);
+  background: var(--earth-brown);
   color: #FFFFFF;
-  box-shadow: 0 4px 14px rgba(123, 94, 60, 0.22);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 .portal-tab-badge {
@@ -53,22 +53,22 @@
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #F3F4F6;
-  color: #6B7280;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
   transition: all 0.2s ease;
 }
 
 .portal-tab-btn.active .portal-tab-badge {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.25);
   color: #FFFFFF;
 }
 
 /* --- Portal Table Panel & Toolbar --- */
 .portal-table-panel {
-  background-color: #FFFFFF;
+  background-color: var(--bg-secondary);
   border-radius: 24px;
-  border: 1px solid #F3F4F6;
-  box-shadow: 0 4px 15px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -76,7 +76,7 @@
 }
 
 .portal-table-panel:hover {
-  box-shadow: 0 8px 24px rgba(78, 58, 40, 0.08);
+  box-shadow: var(--shadow-lg);
 }
 
 .portal-toolbar {
@@ -86,8 +86,8 @@
   gap: 14px;
   flex-wrap: wrap;
   padding: 18px 24px;
-  border-bottom: 1px solid #F3F4F6;
-  background-color: #FFFFFF;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
 }
 
 /* --- Search & Filter Controls --- */
@@ -101,9 +101,9 @@
   width: 100%;
   padding: 9px 12px 9px 38px;
   border-radius: 12px;
-  border: 1px solid #E5E7EB;
-  background-color: #FAFAFA;
-  color: #111827;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
   font-size: 0.85rem;
   font-weight: 500;
   transition: all 0.2s ease;
@@ -111,9 +111,9 @@
 }
 
 .admin-search-box input:focus {
-  background-color: #FFFFFF;
-  border-color: #7B5E3C;
-  box-shadow: 0 0 0 3px rgba(123, 94, 60, 0.12);
+  background-color: var(--bg-secondary);
+  border-color: var(--sage-green);
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15);
 }
 
 .admin-search-box .search-icon {
@@ -121,7 +121,7 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #9CA3AF;
+  color: var(--text-muted);
   pointer-events: none;
 }
 
@@ -132,7 +132,7 @@
   transform: translateY(-50%);
   background: transparent;
   border: none;
-  color: #9CA3AF;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 2px;
   display: flex;
@@ -141,17 +141,17 @@
 }
 
 .admin-search-box .clear-btn:hover {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 /* --- Filter Pills for Devices / Status --- */
 .admin-filter-pill-group {
   display: flex;
   gap: 4px;
-  background-color: #F9FAFB;
+  background-color: var(--bg-tertiary);
   padding: 4px;
   border-radius: 12px;
-  border: 1px solid #F3F4F6;
+  border: 1px solid var(--border-color);
 }
 
 .admin-filter-pill {
@@ -159,7 +159,7 @@
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: #6B7280;
+  color: var(--text-secondary);
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
@@ -170,13 +170,14 @@
 }
 
 .admin-filter-pill:hover {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .admin-filter-pill.active {
-  background: #FFFFFF;
-  color: #7B5E3C;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: var(--bg-secondary);
+  color: var(--sage-green);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 /* --- WhatsApp Quick Link --- */
@@ -212,26 +213,26 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background-color: #F5EFE6;
-  color: #7B5E3C;
+  background-color: var(--bg-tertiary);
+  color: var(--sage-green);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 1rem;
-  border: 1px solid rgba(231, 220, 197, 0.8);
+  border: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
 .admin-farmer-name {
   font-weight: 700;
   font-size: 0.9rem;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .admin-farmer-sub {
   font-size: 0.78rem;
-  color: #6B7280;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
@@ -240,9 +241,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background-color: #F5EFE6;
-  border: 1px solid rgba(231, 220, 197, 0.9);
-  color: #7B5E3C;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--sage-green);
   padding: 3px 9px;
   border-radius: 8px;
   font-size: 0.75rem;
@@ -259,18 +260,18 @@
 }
 
 .admin-device-chip .chip-dot.online {
-  background-color: #16A34A;
-  box-shadow: 0 0 6px rgba(22, 163, 74, 0.4);
+  background-color: var(--sage-green);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
 }
 
 .admin-device-chip .chip-dot.offline {
-  background-color: #9CA3AF;
+  background-color: var(--text-muted);
 }
 
 .admin-device-chip .chip-unlink {
   background: transparent;
   border: none;
-  color: #9CA3AF;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0;
   display: inline-flex;
@@ -288,11 +289,11 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: 8px;
-  background-color: #F8F9FA;
-  border: 1px solid #E5E7EB;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-weight: 800;
-  color: #111827;
+  color: var(--text-primary);
   font-size: 0.82rem;
 }
 
@@ -309,21 +310,21 @@
   gap: 5px;
   padding: 6px 12px;
   border-radius: 10px;
-  border: 1px solid #7B5E3C;
-  background-color: #7B5E3C;
+  border: 1px solid var(--earth-brown);
+  background-color: var(--earth-brown);
   color: #FFFFFF;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(123, 94, 60, 0.18);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .admin-btn-assign:hover {
-  background-color: #634b30;
-  border-color: #634b30;
+  background-color: var(--earth-brown-hover, #A37E55);
+  border-color: var(--earth-brown-hover, #A37E55);
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(123, 94, 60, 0.25);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .admin-btn-edit {
@@ -332,9 +333,9 @@
   gap: 5px;
   padding: 6px 10px;
   border-radius: 10px;
-  border: 1px solid #E5E7EB;
-  background-color: #FFFFFF;
-  color: #4B5563;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
@@ -342,9 +343,9 @@
 }
 
 .admin-btn-edit:hover {
-  background-color: #F5EFE6;
-  color: #7B5E3C;
-  border-color: rgba(231, 220, 197, 0.8);
+  background-color: var(--bg-tertiary);
+  color: var(--sage-green);
+  border-color: var(--border-color-strong);
 }
 
 .admin-btn-danger {
@@ -353,9 +354,9 @@
   gap: 5px;
   padding: 6px 10px;
   border-radius: 10px;
-  border: 1px solid #FEE2E2;
-  background-color: #FFFFFF;
-  color: #DC2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background-color: var(--bg-secondary);
+  color: #F87171;
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
@@ -363,8 +364,8 @@
 }
 
 .admin-btn-danger:hover {
-  background-color: #FEF2F2;
-  border-color: #FECACA;
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 /* --- Empty State --- */
@@ -382,8 +383,8 @@
   width: 52px;
   height: 52px;
   border-radius: 16px;
-  background-color: #F5EFE6;
-  color: #7B5E3C;
+  background-color: var(--bg-tertiary);
+  color: var(--sage-green);
   display: flex;
   align-items: center;
   justify-content: center;

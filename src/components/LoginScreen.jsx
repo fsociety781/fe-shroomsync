@@ -15,12 +15,18 @@ import {
   Mail,
   Shield,
   CheckCircle2,
-  Cpu
+  Cpu,
+  Sun,
+  Moon,
+  Thermometer,
+  Wind,
+  Sparkles
 } from 'lucide-react';
 import api, { APIError } from '../services/api';
 import { isMobileApp } from '../utils/platform';
+import './LoginScreen.css';
 
-export default function LoginScreen({ onLoginSuccess, onBackToLanding }) {
+export default function LoginScreen({ onLoginSuccess, onBackToLanding, theme: propTheme, toggleTheme: propToggleTheme }) {
   const [identifier, setIdentifier] = useState(() => {
     return localStorage.getItem('shroomsync_saved_identifier') || '';
   });
@@ -32,7 +38,24 @@ export default function LoginScreen({ onLoginSuccess, onBackToLanding }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Professional Modals
+  // Theme Fallback
+  const [localTheme, setLocalTheme] = useState(() => {
+    return document.documentElement.getAttribute('data-theme') || localStorage.getItem('shroomsync_theme') || 'dark';
+  });
+  const activeTheme = propTheme || localTheme;
+
+  const handleToggleTheme = () => {
+    if (propToggleTheme) {
+      propToggleTheme();
+    } else {
+      const nextTheme = activeTheme === 'dark' ? 'light' : 'dark';
+      setLocalTheme(nextTheme);
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      localStorage.setItem('shroomsync_theme', nextTheme);
+    }
+  };
+
+  // Modals
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
@@ -87,243 +110,295 @@ export default function LoginScreen({ onLoginSuccess, onBackToLanding }) {
     }
   };
 
-
   return (
-    <div className="login-canvas">
+    <div className="login-canvas" data-theme={activeTheme}>
+      {/* Background Ambient Lighting & IoT Grid (Synchronized with Landing Page) */}
+      <div className="login-ambient-layer">
+        <div className="login-orb login-orb-emerald" />
+        <div className="login-orb login-orb-bronze" />
+        <div className="login-orb login-orb-gold" />
+      </div>
+      <div className="login-grid-layer" />
+
+      {/* Top Header Controls: Navigation, System Online Pill, and Theme Switcher */}
+      <header className="login-topbar">
+        {!isMobileApp() && onBackToLanding ? (
+          <button 
+            type="button"
+            onClick={onBackToLanding}
+            className="login-back-btn"
+            title="Kembali ke Landing Page Beranda"
+          >
+            <ArrowLeft size={15} />
+            <span>Kembali ke Beranda</span>
+          </button>
+        ) : <div />}
+
+        <div className="login-topbar-right">
+          <div className="login-status-pill">
+            <span className="login-status-dot" />
+            <span>Sistem Operasional Online</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleToggleTheme}
+            className="login-theme-btn"
+            title={activeTheme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+            aria-label="Toggle Theme"
+          >
+            {activeTheme === 'dark' ? (
+              <>
+                <Sun size={15} style={{ color: '#FBBF24' }} />
+                <span>Terang</span>
+              </>
+            ) : (
+              <>
+                <Moon size={15} style={{ color: '#4B5563' }} />
+                <span>Gelap</span>
+              </>
+            )}
+          </button>
+        </div>
+      </header>
+
+      {/* Master Login Card Architecture */}
       <div className="login-wrapper">
         <motion.div 
           className="login-card"
-          initial={{ opacity: 0, y: 20, scale: 0.98 }}
+          initial={{ opacity: 0, y: 22, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
         >
-          {/* Header Navigation: Kembali ke Beranda (Hanya di Web Desktop) */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            {!isMobileApp() && onBackToLanding ? (
-              <button 
-                type="button"
-                onClick={onBackToLanding}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(82, 163, 107, 0.25)',
-                  color: 'var(--text-secondary, #9cb1a2)',
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <ArrowLeft size={14} />
-                <span>Kembali ke Beranda</span>
-              </button>
-            ) : <div />}
-
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#86efac' }}>
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block', boxShadow: '0 0 8px #22c55e' }} />
-              <span>Sistem Operasional Online</span>
-            </div>
-          </div>
-
-          {/* Header & Brand Identitas Resmi */}
-          <div className="login-header">
-            <div className="login-badge">
-              <span className="login-badge-dot" />
-              <Sprout size={14} className="text-sage" />
-              <span>{isMobileApp() ? 'Aplikasi Mobile Petani Kumbung' : 'Enterprise Smart Cultivation IoT'}</span>
-            </div>
-
-            <div className="login-brand">
-              <div className="login-logo-container">
-                <img 
-                  src="/log.svg?v=2" 
-                  alt="ShroomSync" 
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
-              <h1>ShroomSync</h1>
-            </div>
-
-            <p className="login-subtitle">
-              {isMobileApp() 
-                ? 'Portal Mandiri Petani — Monitoring & Kontrol Kumbung Jamur' 
-                : 'Portal Manajemen & Kendali Otomasi Ekosistem Kumbung Jamur'}
-            </p>
-          </div>
-
-          {/* Error Alert */}
-          {error && (
-            <motion.div 
-              className="login-alert login-alert--error"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              transition={{ duration: 0.25 }}
-            >
-              <AlertCircle size={18} />
-              <span>{error}</span>
-            </motion.div>
-          )}
-
-          {/* Form Login Resmi */}
-          <form className="login-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="login-identifier">Username atau Email Akun</label>
-              <div className="input-with-icon">
-                <User size={18} className="input-icon" />
-                <input
-                  id="login-identifier"
-                  type="text"
-                  placeholder="Masukkan username atau email terdaftar..."
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  disabled={loading}
-                  autoComplete="username"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <div className="form-label-row">
-                <label htmlFor="login-password">Kata Sandi</label>
-                <button
-                  type="button"
-                  onClick={() => setShowForgotModal(true)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--primary, #5a9e6f)',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    padding: 0,
-                  }}
-                >
-                  Lupa kata sandi?
-                </button>
-              </div>
-              <div className="input-with-icon">
-                <Lock size={18} className="input-icon" />
-                <input
-                  id="login-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Masukkan kata sandi akun..."
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  autoComplete="current-password"
-                  required
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                  aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Remember Me Option */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 0 16px 0', fontSize: '0.82rem', color: 'var(--text-secondary, #9cb1a2)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  style={{ accentColor: '#447253', width: '15px', height: '15px', cursor: 'pointer' }}
-                />
-                <span>Ingat saya di perangkat ini</span>
-              </label>
-
-              <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-                Terkoneksi SupaKu IoT Core
-              </span>
-            </div>
-
-            <button 
-              type="submit" 
-              className="primary-button full-button login-btn"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <span className="spinner-icon" />
-                  <span>Mengautentikasi Sesi...</span>
-                </>
-              ) : (
-                <>
-                  <span>Masuk ke Dashboard</span>
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Security & Reliability Trust Indicators */}
-          <div style={{
-            marginTop: '24px',
-            paddingTop: '18px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-around',
-            fontSize: '0.74rem',
-            color: 'var(--text-muted, #7c9383)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <Shield size={14} style={{ color: '#4ade80' }} />
-              <span>TLS 1.3 Terenkripsi</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <Cpu size={14} style={{ color: '#60a5fa' }} />
-              <span>SupaKu Mesh IoT</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <CheckCircle2 size={14} style={{ color: '#c084fc' }} />
-              <span>Multi-Role RBAC</span>
-            </div>
-          </div>
-
-          {/* Footer Legal & Version */}
-          <div style={{
-            marginTop: '16px',
-            textAlign: 'center',
-            fontSize: '0.72rem',
-            color: 'var(--text-muted, #6f8275)'
-          }}>
+          {/* Left Column: Enterprise IoT Showcase (Hidden on Mobile, Visible on Desktop) */}
+          <div className="login-showcase-panel">
             <div>
-              <button 
-                type="button" 
-                onClick={() => setShowTermsModal(true)} 
-                style={{ background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: '0 4px', fontSize: 'inherit' }}
-              >
-                Syarat & Ketentuan Layanan
-              </button>
-              <span> • </span>
-              <button 
-                type="button" 
-                onClick={() => setShowTermsModal(true)} 
-                style={{ background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: '0 4px', fontSize: 'inherit' }}
-              >
-                Kebijakan Privasi
-              </button>
+              <div className="login-showcase-badge">
+                <Sprout size={14} />
+                <span>SupaKu IoT Ecosystem • v2.4</span>
+              </div>
+
+              <h2 className="login-showcase-title">
+                Presisi Iklim Mikro <span>Kumbung Jamur</span> Modern
+              </h2>
+              <p className="login-showcase-desc">
+                Portal komprehensif telemetri real-time, monitoring sensorik sub-detik, dan otomasi aktuator cerdas untuk memaksimalkan produktivitas panen jamur Anda.
+              </p>
+
+              <div className="login-features-list">
+                <div className="login-feature-card">
+                  <div className="login-feature-icon-box">
+                    <Thermometer size={18} />
+                  </div>
+                  <div className="login-feature-content">
+                    <strong>Telemetri Sensor Presisi Tinggi</strong>
+                    <p>Monitoring suhu & RH real-time dengan sensor industri SHT40.</p>
+                  </div>
+                </div>
+
+                <div className="login-feature-card">
+                  <div className="login-feature-icon-box" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#F59E0B' }}>
+                    <Wind size={18} />
+                  </div>
+                  <div className="login-feature-content">
+                    <strong>Otonom & Fail-Safe Actuation</strong>
+                    <p>SupaKu Controller tetap menjaga sirkulasi & kabut meski offline.</p>
+                  </div>
+                </div>
+
+                <div className="login-feature-card">
+                  <div className="login-feature-icon-box" style={{ background: 'rgba(56, 189, 248, 0.12)', color: '#38BDF8' }}>
+                    <Cpu size={18} />
+                  </div>
+                  <div className="login-feature-content">
+                    <strong>Mesh Networking & TLS 1.3</strong>
+                    <p>Konektivitas stabil terdistribusi dengan enkripsi tingkat perbankan.</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div style={{ marginTop: '4px', opacity: 0.7 }}>
-              © 2026 ShroomSync Technologies. Hak Cipta Dilindungi. <span style={{ marginLeft: '6px', fontSize: '0.68rem', opacity: 0.6 }}>v2.4.0</span>
+
+            <div className="login-showcase-footer">
+              <span>Sistem Terverifikasi SupaKu Core</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#86efac' }}>
+                <Sparkles size={13} />
+                <span>Standar Industri Pertanian</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Interactive Login Form */}
+          <div className="login-form-panel">
+            <div className="login-header">
+              <div className="login-brand">
+                <div className="login-logo-container">
+                  <img 
+                    src="/log.svg?v=2" 
+                    alt="ShroomSync" 
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+                <h1>ShroomSync</h1>
+              </div>
+
+              <p className="login-subtitle">
+                {isMobileApp() 
+                  ? 'Portal Mandiri Petani — Monitoring & Kontrol Kumbung Jamur' 
+                  : 'Portal Manajemen & Kendali Otomasi Ekosistem Kumbung Jamur'}
+              </p>
+            </div>
+
+            {/* Error Notification Alert */}
+            {error && (
+              <motion.div 
+                className="login-alert login-alert--error"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.25 }}
+              >
+                <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
+                <span>{error}</span>
+              </motion.div>
+            )}
+
+            {/* Form Input Fields */}
+            <form className="login-form" onSubmit={handleSubmit}>
+              <div className="login-form-group">
+                <label htmlFor="login-identifier">Username atau Email Akun</label>
+                <div className="login-input-wrapper">
+                  <User size={18} className="login-input-icon" />
+                  <input
+                    id="login-identifier"
+                    type="text"
+                    className="login-input-field"
+                    placeholder="Masukkan username atau email terdaftar..."
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    disabled={loading}
+                    autoComplete="username"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="login-form-group">
+                <div className="login-label-row">
+                  <label htmlFor="login-password">Kata Sandi</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(true)}
+                    className="login-forgot-link"
+                  >
+                    Lupa kata sandi?
+                  </button>
+                </div>
+                <div className="login-input-wrapper">
+                  <Lock size={18} className="login-input-icon" />
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    className="login-input-field"
+                    placeholder="Masukkan kata sandi akun..."
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="login-pw-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me Checkbox & Core Status */}
+              <div className="login-meta-row">
+                <label className="login-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span>Ingat saya di perangkat ini</span>
+                </label>
+
+                <span className="login-meta-core">
+                  Terkoneksi SupaKu IoT Core
+                </span>
+              </div>
+
+              {/* Action Submit Button */}
+              <button 
+                type="submit" 
+                className="login-submit-btn"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="login-spinner" />
+                    <span>Mengautentikasi Sesi...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Masuk ke Dashboard</span>
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Security Trust Indicators */}
+            <div className="login-trust-bar">
+              <div className="login-trust-item">
+                <Shield size={14} style={{ color: '#4ade80' }} />
+                <span>TLS 1.3 Terenkripsi</span>
+              </div>
+              <div className="login-trust-item">
+                <Cpu size={14} style={{ color: '#60a5fa' }} />
+                <span>SupaKu Mesh IoT</span>
+              </div>
+              <div className="login-trust-item">
+                <CheckCircle2 size={14} style={{ color: '#c084fc' }} />
+                <span>Multi-Role RBAC</span>
+              </div>
+            </div>
+
+            {/* Legal Links & Version Footer */}
+            <div className="login-legal-footer">
+              <div>
+                <button 
+                  type="button" 
+                  onClick={() => setShowTermsModal(true)} 
+                  className="login-legal-link"
+                >
+                  Syarat & Ketentuan Layanan
+                </button>
+                <span> • </span>
+                <button 
+                  type="button" 
+                  onClick={() => setShowTermsModal(true)} 
+                  className="login-legal-link"
+                >
+                  Kebijakan Privasi
+                </button>
+              </div>
+              <div style={{ marginTop: '5px', opacity: 0.75 }}>
+                © 2026 ShroomSync Technologies. Hak Cipta Dilindungi. <span style={{ marginLeft: '4px', fontSize: '0.68rem', opacity: 0.65 }}>v2.4.0</span>
+              </div>
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Modal Lupa Kata Sandi Resmi */}
+      {/* Modal Lupa Kata Sandi */}
       <AnimatePresence>
         {showForgotModal && (
           <div className="modal-overlay" onClick={() => setShowForgotModal(false)} style={{ zIndex: 10000 }}>
@@ -384,7 +459,7 @@ export default function LoginScreen({ onLoginSuccess, onBackToLanding }) {
         )}
       </AnimatePresence>
 
-      {/* Modal Syarat & Privasi Resmi */}
+      {/* Modal Syarat & Kebijakan Privasi */}
       <AnimatePresence>
         {showTermsModal && (
           <div className="modal-overlay" onClick={() => setShowTermsModal(false)} style={{ zIndex: 10000 }}>

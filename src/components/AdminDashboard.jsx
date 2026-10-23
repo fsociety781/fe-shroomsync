@@ -21,6 +21,9 @@ import {
   Trash2,
   Terminal,
   ChevronRight,
+  Sun,
+  Moon,
+  Sparkles,
 } from 'lucide-react';
 import api from '../services/api';
 import DeviceBarcodeStickerModal from './DeviceBarcodeStickerModal';
@@ -33,6 +36,8 @@ export default function AdminDashboard({
   currentUser,
   activeTab: controlledTab,
   onTabChange,
+  theme,
+  toggleTheme,
 }) {
   const [internalTab, setInternalTab] = useState('dashboard');
   const activeTab = controlledTab ?? internalTab;
@@ -181,7 +186,7 @@ export default function AdminDashboard({
           (f.id && (f.id === d.userId || f.id === d.farmerId)) ||
           f.devices?.some((dev) => (dev.deviceId || dev.serialNumber || dev.id) === (d.deviceId || d.serialNumber || d.id))
         );
-        return !Boolean(assignedFarmer || d.userId || d.farmerId || d.farmer || d.assignedFarmer || d.ownerName);
+        return !(assignedFarmer || d.userId || d.farmerId || d.farmer || d.assignedFarmer || d.ownerName);
       });
     }
 
@@ -407,6 +412,21 @@ export default function AdminDashboard({
             <Users size={13} style={{ color: '#86efac' }} />
             <span>{farmers.length} Petani Terdaftar</span>
           </span>
+          {toggleTheme && (
+            <>
+              <span style={{ opacity: 0.4 }}>•</span>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="tech-theme-toggle-btn"
+                title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                aria-label="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun size={13} style={{ color: '#FBBF24' }} /> : <Moon size={13} style={{ color: '#E5E7EB' }} />}
+                <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -420,11 +440,11 @@ export default function AdminDashboard({
               onClick={onMenuToggle}
               className="mobile-menu-toggle"
               style={{
-                background: 'white',
-                border: '1px solid #E5E7EB',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '10px',
                 padding: '8px',
-                color: '#374151',
+                color: 'var(--text-primary)',
                 cursor: 'pointer',
               }}
               aria-label="Toggle menu"
@@ -435,7 +455,7 @@ export default function AdminDashboard({
           <div>
             <h1 className="tech-header-title">Portal Administrator Regional</h1>
             <p className="tech-header-subtitle">
-              Sesi: <strong style={{ color: '#111827' }}>{currentUser?.fullName || currentUser?.name || 'Admin Wilayah Lembang'}</strong> • Manajemen Petani Binaan & Penugasan SupaKu
+              Sesi: <strong style={{ color: 'var(--text-primary)' }}>{currentUser?.fullName || currentUser?.name || 'Admin Wilayah Lembang'}</strong> • Manajemen Petani Binaan & Penugasan SupaKu
             </p>
           </div>
         </div>
@@ -544,7 +564,7 @@ export default function AdminDashboard({
                 <div className="portal-table-panel" style={{ padding: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
-                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                         Pemanfaatan SupaKu Wilayah
                       </h3>
                       <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
@@ -558,11 +578,11 @@ export default function AdminDashboard({
 
                   {/* Progress Bar & Breakdown */}
                   <div style={{ marginBottom: '22px' }}>
-                    <div style={{ display: 'flex', height: '14px', borderRadius: '999px', overflow: 'hidden', backgroundColor: '#F3F4F6' }}>
+                    <div style={{ display: 'flex', height: '14px', borderRadius: '999px', overflow: 'hidden', backgroundColor: 'var(--bg-tertiary)' }}>
                       <div
                         style={{
                           width: `${devices.length > 0 ? (assignedCount / devices.length) * 100 : 0}%`,
-                          backgroundColor: '#7B5E3C',
+                          backgroundColor: 'var(--earth-brown)',
                           transition: 'width 0.5s ease',
                         }}
                         title={`Ditugaskan: ${assignedCount} unit`}
@@ -570,7 +590,7 @@ export default function AdminDashboard({
                       <div
                         style={{
                           width: `${devices.length > 0 ? (unassignedCount / devices.length) * 100 : 0}%`,
-                          backgroundColor: '#E7DCC5',
+                          backgroundColor: 'var(--warm-beige)',
                           transition: 'width 0.5s ease',
                         }}
                         title={`Tersedia di Gudang: ${unassignedCount} unit`}
@@ -578,28 +598,28 @@ export default function AdminDashboard({
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.82rem', flexWrap: 'wrap', gap: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#7B5E3C' }} />
-                        <span style={{ color: '#4B5563', fontWeight: 600 }}>Ditugaskan ke Petani:</span>
-                        <strong style={{ color: '#111827' }}>{assignedCount} Unit</strong>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--earth-brown)' }} />
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Ditugaskan ke Petani:</span>
+                        <strong style={{ color: 'var(--text-primary)' }}>{assignedCount} Unit</strong>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#E7DCC5' }} />
-                        <span style={{ color: '#4B5563', fontWeight: 600 }}>Tersedia di Gudang:</span>
-                        <strong style={{ color: '#111827' }}>{unassignedCount} Unit</strong>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--warm-beige)' }} />
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Tersedia di Gudang:</span>
+                        <strong style={{ color: 'var(--text-primary)' }}>{unassignedCount} Unit</strong>
                       </div>
                     </div>
                   </div>
 
                   {/* Farmer Roster Preview */}
-                  <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '18px' }}>
+                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '18px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                         Ringkasan Petani Binaan ({farmers.length})
                       </h4>
                       <button
                         type="button"
                         onClick={() => setActiveTab('farmers')}
-                        style={{ background: 'none', border: 'none', color: '#7B5E3C', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        style={{ background: 'none', border: 'none', color: 'var(--earth-brown)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       >
                         <span>Buka Roster Lengkap</span>
                         <ChevronRight size={14} />
@@ -616,8 +636,8 @@ export default function AdminDashboard({
                             alignItems: 'center',
                             padding: '10px 14px',
                             borderRadius: '12px',
-                            backgroundColor: '#FAFAFA',
-                            border: '1px solid #F3F4F6',
+                            backgroundColor: 'var(--bg-tertiary)',
+                            border: '1px solid var(--border-color)',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -625,7 +645,7 @@ export default function AdminDashboard({
                               {f.fullName?.charAt(0)?.toUpperCase() || 'P'}
                             </div>
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827' }}>{f.fullName}</div>
+                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>{f.fullName}</div>
                               <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>{f.farmName || 'Kumbung Binaan'} • {f.phoneNumber}</div>
                             </div>
                           </div>
@@ -653,7 +673,7 @@ export default function AdminDashboard({
               <div className="admin-grid-side">
                 {/* Quick Actions Panel */}
                 <div className="portal-table-panel" style={{ padding: '22px' }}>
-                  <h3 style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 800, color: '#111827' }}>
+                  <h3 style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                     Aksi Cepat Wilayah
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -693,27 +713,27 @@ export default function AdminDashboard({
                 </div>
 
                 {/* Regional Node Status */}
-                <div className="portal-table-panel" style={{ padding: '22px', backgroundColor: '#FDFBF7', border: '1px solid rgba(231, 220, 197, 0.6)' }}>
-                  <h3 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 800, color: '#7B5E3C', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="portal-table-panel" style={{ padding: '22px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
+                  <h3 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 800, color: 'var(--earth-brown)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Shield size={16} />
                     <span>Simpul Regional ShroomSync</span>
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.82rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(231, 220, 197, 0.6)', paddingBottom: '8px' }}>
-                      <span style={{ color: '#6B7280' }}>Wilayah Kerja:</span>
-                      <strong style={{ color: '#111827' }}>{currentUser?.region || 'Lembang, Jawa Barat'}</strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Wilayah Kerja:</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{currentUser?.region || 'Lembang, Jawa Barat'}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(231, 220, 197, 0.6)', paddingBottom: '8px' }}>
-                      <span style={{ color: '#6B7280' }}>Admin Bertugas:</span>
-                      <strong style={{ color: '#111827' }}>{currentUser?.fullName || currentUser?.username || 'Admin'}</strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Admin Bertugas:</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{currentUser?.fullName || currentUser?.username || 'Admin'}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(231, 220, 197, 0.6)', paddingBottom: '8px' }}>
-                      <span style={{ color: '#6B7280' }}>Koneksi Server:</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Koneksi Server:</span>
                       <span className="tech-badge-active" style={{ fontSize: '9px', padding: '2px 8px' }}>OPERASIONAL</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#6B7280' }}>Versi Panel:</span>
-                      <strong style={{ color: '#7B5E3C', fontFamily: 'monospace' }}>v2.4.0 (Regional)</strong>
+                      <span style={{ color: 'var(--text-muted)' }}>Versi Panel:</span>
+                      <strong style={{ color: 'var(--earth-brown)', fontFamily: 'monospace' }}>v2.4.0 (Regional)</strong>
                     </div>
                   </div>
                 </div>
@@ -797,7 +817,7 @@ export default function AdminDashboard({
                         <td data-label="Kontak">
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.82rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontWeight: 700, color: '#111827' }}>{farmer.phoneNumber}</span>
+                              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{farmer.phoneNumber}</span>
                               {farmer.phoneNumber && (
                                 <a
                                   href={`https://wa.me/${farmer.phoneNumber.replace(/[^0-9]/g, '')}?text=Halo%20${encodeURIComponent(farmer.fullName)},%20kami%20dari%20Admin%20Regional%20ShroomSync`}
@@ -894,7 +914,7 @@ export default function AdminDashboard({
                             <div className="admin-empty-icon">
                               <Users size={24} />
                             </div>
-                            <p style={{ margin: 0, fontWeight: 700, color: '#374151' }}>
+                            <p style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>
                               {searchQuery ? 'Tidak ada petani yang cocok dengan kata kunci pencarian.' : 'Belum ada petani binaan terdaftar.'}
                             </p>
                             {searchQuery ? (
@@ -935,7 +955,7 @@ export default function AdminDashboard({
               <div className="portal-toolbar">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>Penugasan Unit SupaKu Wilayah</h3>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>Penugasan Unit SupaKu Wilayah</h3>
                     <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
                       Petakan unit fisik ke akun petani binaan agar otomatis muncul di dashboard petani.
                     </p>
@@ -1028,13 +1048,13 @@ export default function AdminDashboard({
                             </span>
                           </td>
                           <td data-label="Model">
-                            <div style={{ fontWeight: 700, color: '#111827' }}>{d.name || 'SupaKu IoT Node'}</div>
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{d.name || 'SupaKu IoT Node'}</div>
                             <small style={{ color: '#6B7280', fontSize: '0.75rem' }}>Hardware v{d.hardwareVersion || '2.0'}</small>
                           </td>
                           <td data-label="Petani">
                             {assignedFarmer || d.farmer || d.assignedFarmer ? (
                               <div>
-                                <div style={{ fontWeight: 700, color: '#111827' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                                   {assignedFarmer?.fullName || d.farmer?.fullName || d.assignedFarmer || 'Petani Terdaftar'}
                                 </div>
                                 <div className="admin-farmer-sub">
@@ -1099,7 +1119,7 @@ export default function AdminDashboard({
                             <div className="admin-empty-icon">
                               <Cpu size={24} />
                             </div>
-                            <p style={{ margin: 0, fontWeight: 700, color: '#374151' }}>
+                            <p style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>
                               {deviceSearchQuery || deviceFilter !== 'ALL'
                                 ? 'Tidak ada unit SupaKu yang cocok dengan filter atau pencarian.'
                                 : 'Belum ada unit SupaKu terdaftar di wilayah ini.'}
@@ -1188,7 +1208,7 @@ export default function AdminDashboard({
                 />
               </div>
 
-              <div style={{ backgroundColor: '#F5EFE6', border: '1px solid rgba(123, 94, 60, 0.25)', borderRadius: '12px', padding: '10px 14px', fontSize: '0.8rem', color: '#7B5E3C', lineHeight: '1.5' }}>
+              <div style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '10px 14px', fontSize: '0.8rem', color: 'var(--earth-brown)', lineHeight: '1.5' }}>
                 <div style={{ fontWeight: 800, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Sparkles size={14} />
                   <span>Onboarding Mandiri Petani</span>

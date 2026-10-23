@@ -23,11 +23,13 @@ import './LandingPage.css';
 export default function LandingPage({ onGoToLogin, onGoToDashboard, isAuthenticated }) {
   // State Tema Tampilan (Default ke 'dark' sesuai permintaan user)
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('shroomsync_lp_theme') || 'dark';
+    return localStorage.getItem('shroomsync_theme') || localStorage.getItem('shroomsync_lp_theme') || 'dark';
   });
 
   useEffect(() => {
+    localStorage.setItem('shroomsync_theme', theme);
     localStorage.setItem('shroomsync_lp_theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
