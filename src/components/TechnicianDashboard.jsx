@@ -686,9 +686,11 @@ export default function TechnicianDashboard({
   }, []);
 
   // Load OTA deployment execution logs
-  const loadOtaLogs = useCallback(async () => {
+  const loadOtaLogs = useCallback(async (isSilent = false) => {
     try {
-      setLoadingOtaLogs(true);
+      if (!isSilent) {
+        setLoadingOtaLogs(true);
+      }
       const res = await api.technician.getOTALogs('ALL', 50, 0);
       const list = Array.isArray(res) ? res : res?.records || [];
       setOtaLogs(list);
@@ -704,7 +706,7 @@ export default function TechnicianDashboard({
     if (activeTab === 'ota') {
       const timer = window.setTimeout(() => {
         void loadFirmwares();
-        void loadOtaLogs();
+        void loadOtaLogs(true);
       }, 0);
       return () => window.clearTimeout(timer);
     }
@@ -726,7 +728,7 @@ export default function TechnicianDashboard({
     if (!hasActiveDeployment) return undefined;
 
     const pollTimer = setInterval(() => {
-      loadOtaLogs();
+      loadOtaLogs(true);
       loadData();
     }, 3500);
 
@@ -1889,7 +1891,7 @@ export default function TechnicianDashboard({
               </div>
             </div>
 
-            {loadingFirmwares ? (
+            {loadingFirmwares && firmwares.length === 0 ? (
               <div style={{ padding: '36px', textAlign: 'center', color: '#9CA3AF' }}>
                 <RefreshCw size={24} className="spin-icon" style={{ marginBottom: '8px' }} />
                 <div>Memuat daftar firmware dari server...</div>
@@ -2386,7 +2388,7 @@ export default function TechnicianDashboard({
               </button>
             </div>
 
-            {loadingOtaLogs ? (
+            {loadingOtaLogs && otaLogs.length === 0 ? (
               <div style={{ padding: '36px', textAlign: 'center', color: '#9CA3AF' }}>
                 <RefreshCw size={22} className="spin-icon" style={{ marginBottom: '8px' }} />
                 <div>Memuat log riwayat OTA...</div>
@@ -2492,7 +2494,7 @@ export default function TechnicianDashboard({
               </button>
             </div>
 
-            {loadingOtaLogs ? (
+            {loadingOtaLogs && otaLogs.length === 0 ? (
               <div style={{ padding: '40px', textAlign: 'center', color: '#9CA3AF' }}>
                 <RefreshCw size={24} className="spin-icon" style={{ marginBottom: '8px' }} />
                 <div>Memuat log riwayat OTA...</div>
