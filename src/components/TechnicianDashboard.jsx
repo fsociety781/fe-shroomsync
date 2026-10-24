@@ -785,6 +785,10 @@ export default function TechnicianDashboard({
       showNotification('Versi firmware wajib diisi', 'warning');
       return;
     }
+    if (!firmwareUploadForm.hardwareVersion || !firmwareUploadForm.hardwareVersion.trim()) {
+      showNotification('Versi hardware target wajib diisi (contoh: 1.0)', 'warning');
+      return;
+    }
 
     try {
       setUploadProgress(true);
@@ -794,18 +798,19 @@ export default function TechnicianDashboard({
         .replace(/^v/i, '')
         .trim();
       const finalVersion = cleanVersion || rawVersion;
+      const cleanHwVersion = firmwareUploadForm.hardwareVersion.trim();
 
       const formData = new FormData();
       formData.append('firmware', firmwareUploadForm.file);
       formData.append('version', finalVersion);
-      formData.append('hardwareVersion', firmwareUploadForm.hardwareVersion);
+      formData.append('hardwareVersion', cleanHwVersion);
       if (firmwareUploadForm.changelog) {
         formData.append('changelog', firmwareUploadForm.changelog.trim());
       }
       formData.append('isLatest', String(firmwareUploadForm.isLatest));
 
       const res = await api.technician.uploadFirmware(formData);
-      showNotification(`✓ Firmware v${finalVersion} berhasil diunggah dan diverifikasi!`, 'success');
+      showNotification(`✓ Firmware v${finalVersion} (HW v${cleanHwVersion}) berhasil diunggah dan diverifikasi!`, 'success');
       setShowUploadFirmwareModal(false);
       setFirmwareUploadForm({
         file: null,
@@ -2048,7 +2053,7 @@ export default function TechnicianDashboard({
                     <option value="ALL">📢 Seluruh Armada SupaKu (Broadcast Fleet)</option>
                     {devices.map((d) => (
                       <option key={d.serialNumber} value={d.serialNumber}>
-                        {d.serialNumber} - {d.name} (FW saat ini: v{d.firmwareVersion || '2.1.0'})
+                        {d.serialNumber} - {d.name} (HW: v{d.hardwareVersion || '1.0'} | FW: v{d.firmwareVersion || '1.1.0'})
                       </option>
                     ))}
                   </select>
@@ -2087,7 +2092,7 @@ export default function TechnicianDashboard({
                             const relTag = rel > 0 ? '⬆️ UPGRADE' : rel < 0 ? '⬇️ DOWNGRADE' : '🔄 SAMA';
                             return (
                               <option key={f.id} value={f.id}>
-                                v{f.version} {f.isLatest ? '★ (Latest)' : ''} {currentVer ? `[${relTag}]` : ''} — {f.originalName} ({formatBytes(f.fileSize)})
+                                v{f.version} [HW: v{f.hardwareVersion || '1.0'}] {f.isLatest ? '★ (Latest)' : ''} {currentVer ? `[${relTag}]` : ''} — {f.originalName} ({formatBytes(f.fileSize)})
                               </option>
                             );
                           })}
@@ -2152,9 +2157,12 @@ export default function TechnicianDashboard({
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', marginBottom: '4px', fontWeight: 600 }}>
+                          Versi Firmware Target *
+                        </label>
                         <input
                           type="text"
-                          placeholder="Versi Target (Contoh: 2.1.2)"
+                          placeholder="Versi Target (Contoh: 1.2.0 atau 2.1.2)"
                           value={otaForm.firmwareVersion}
                           onChange={(e) => setOtaForm({ ...otaForm, firmwareVersion: e.target.value })}
                           style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
@@ -2162,6 +2170,9 @@ export default function TechnicianDashboard({
                         />
                       </div>
                       <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', marginBottom: '4px', fontWeight: 600 }}>
+                          URL Unduhan File Biner (.bin) *
+                        </label>
                         <input
                           type="url"
                           placeholder="https://firmware.shroomsync.id/supaku/firmware.bin"
@@ -2174,6 +2185,88 @@ export default function TechnicianDashboard({
                     </div>
                   )}
                 </div>
+
+                {/* Target Hardware Board Field */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                      Target Versi Hardware (Board ESP32) *
+                    </label>
+                    {otaTargetDevice?.hardwareVersion && (
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        Board unit {otaTargetDevice.serialNumber}: <strong>v{otaTargetDevice.hardwareVersion}</strong>
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="Contoh: 1.0, 2.0, ESP32-S3"
+                      value={otaForm.hardwareVersion || ''}
+                      onChange={(e) => setOtaForm({ ...otaForm, hardwareVersion: e.target.value })}
+                      style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', fontSize: '0.84rem' }}
+                      required
+                    />
+                    {['1.0', '2.0', 'ESP32-S3'].map((hw) => (
+                      <button
+                        key={hw}
+                        type="button"
+                        onClick={() => setOtaForm({ ...otaForm, hardwareVersion: hw })}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.74rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: (otaForm.hardwareVersion || '1.0') === hw ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: (otaForm.hardwareVersion || '1.0') === hw ? 'rgba(36, 94, 61, 0.12)' : 'transparent',
+                          color: (otaForm.hardwareVersion || '1.0') === hw ? 'var(--primary)' : 'var(--text-secondary)',
+                        }}
+                      >
+                        v{hw}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Hardware Compatibility Warning / Success Notice */}
+                {!otaForm.isBroadcast && otaTargetDevice && (
+                  <div
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      backgroundColor: (otaTargetDevice.hardwareVersion || '1.0') === (otaForm.hardwareVersion || '1.0')
+                        ? 'rgba(34, 197, 94, 0.08)'
+                        : 'rgba(239, 68, 68, 0.12)',
+                      border: `1px solid ${(otaTargetDevice.hardwareVersion || '1.0') === (otaForm.hardwareVersion || '1.0') ? 'rgba(34, 197, 94, 0.3)' : '#ef4444'}`,
+                      fontSize: '0.78rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    {(otaTargetDevice.hardwareVersion || '1.0') === (otaForm.hardwareVersion || '1.0') ? (
+                      <>
+                        <CheckCircle2 size={16} style={{ color: '#22c55e', flexShrink: 0 }} />
+                        <span style={{ color: '#16a34a', fontWeight: 600 }}>
+                          ✓ Kompatibilitas Hardware Sesuai: Target board (v{otaForm.hardwareVersion || '1.0'}) cocok dengan perangkat ({otaTargetDevice.serialNumber}).
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle size={18} style={{ color: '#ef4444', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ color: '#ef4444', fontWeight: 700 }}>
+                            ⚠️ PERINGATAN HW MISMATCH: Target board ({otaForm.hardwareVersion || '1.0'}) ≠ Board perangkat ({otaTargetDevice.hardwareVersion || '1.0'})!
+                          </div>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', marginTop: '2px' }}>
+                            ESP32 akan menolak update dengan pesan <code>hw_mismatch</code>. Klik tombol <strong>v{otaTargetDevice.hardwareVersion || '1.0'}</strong> di atas agar update diterima perangkat.
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {/* Force / Paksa Flash Toggle */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid var(--border-color)' }}>
@@ -3065,27 +3158,60 @@ export default function TechnicianDashboard({
                   </label>
                   <input
                     type="text"
-                    placeholder="Contoh: 2.1.2"
+                    placeholder="Contoh: 1.2.0 atau 2.1.2"
                     value={firmwareUploadForm.version}
                     onChange={(e) => setFirmwareUploadForm({ ...firmwareUploadForm, version: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
                     required
                   />
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Format SemVer (misal: 1.1.0, 1.2.0)
+                  </div>
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '6px' }}>
-                    Target Hardware Board
+                    Versi Hardware (Target HW) *
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Contoh: 1.0, 2.0, ESP32-S3"
                     value={firmwareUploadForm.hardwareVersion}
                     onChange={(e) => setFirmwareUploadForm({ ...firmwareUploadForm, hardwareVersion: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
-                  >
-                    <option value="1.0">SupaKu Node v1.0 (ESP32 Standard)</option>
-                    <option value="2.0">SupaKu Node v2.0 (ESP32 Dual-Pump)</option>
-                  </select>
+                    required
+                  />
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'v1.0 (Standard)', val: '1.0' },
+                      { label: 'v2.0 (Dual-Pump)', val: '2.0' },
+                      { label: 'ESP32-S3 (Universal)', val: 'ESP32-S3' },
+                    ].map((hw) => (
+                      <button
+                        key={hw.val}
+                        type="button"
+                        onClick={() => setFirmwareUploadForm({ ...firmwareUploadForm, hardwareVersion: hw.val })}
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: firmwareUploadForm.hardwareVersion === hw.val ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: firmwareUploadForm.hardwareVersion === hw.val ? 'rgba(36, 94, 61, 0.12)' : 'transparent',
+                          color: firmwareUploadForm.hardwareVersion === hw.val ? 'var(--primary)' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {hw.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              </div>
+
+              {/* Hardware Compatibility Explanatory Box */}
+              <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                <span style={{ fontWeight: 600, color: '#2563eb' }}>ℹ️ Penting:</span> ESP32 memeriksa <code>hardware_version</code> saat menerima instruksi OTA. Jika versi hardware target tidak cocok dengan board fisik perangkat (misal perangkat adalah <code>1.0</code> tapi firmware ditargetkan <code>2.0</code>), ESP32 akan menolak update dengan kode <code>hw_mismatch</code>.
               </div>
 
               {/* isLatest checkbox */}
