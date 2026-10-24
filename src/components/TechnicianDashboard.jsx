@@ -670,7 +670,7 @@ export default function TechnicianDashboard({
           return {
             ...prev,
             firmwareId: latest.id,
-            firmwareUrl: latest.downloadUrl || '',
+            firmwareUrl: (latest.downloadUrl || '').replace(/^https:\/\//i, 'http://'),
             firmwareVersion: latest.version || '',
             hardwareVersion: latest.hardwareVersion || '1.0',
             checksumSha256: latest.checksumSha256 || '',
@@ -751,7 +751,7 @@ export default function TechnicianDashboard({
     setOtaForm((prev) => ({
       ...prev,
       firmwareId: fw.id,
-      firmwareUrl: fw.downloadUrl || '',
+      firmwareUrl: (fw.downloadUrl || '').replace(/^https:\/\//i, 'http://'),
       firmwareVersion: fw.version,
       hardwareVersion: fw.hardwareVersion || '1.0',
       checksumSha256: fw.checksumSha256 || '',
@@ -872,7 +872,7 @@ export default function TechnicianDashboard({
 
       const payload = {
         firmwareId: otaForm.firmwareId || undefined,
-        firmwareUrl: otaForm.firmwareUrl,
+        firmwareUrl: (otaForm.firmwareUrl || '').replace(/^https:\/\//i, 'http://'),
         firmwareVersion: otaForm.firmwareVersion,
         hardwareVersion: otaForm.hardwareVersion || '1.0',
         checksumSha256: otaForm.checksumSha256 || undefined,
