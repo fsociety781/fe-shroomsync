@@ -4045,7 +4045,7 @@ const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, onLogout }) 
             </div>
 
             {/* Quick action button matching Left Card bottom */}
-            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #F3F4F6' }}>
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
               <button 
                 type="button"
                 className="tech-btn-secondary" 

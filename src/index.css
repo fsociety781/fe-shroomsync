@@ -351,12 +351,12 @@ svg {
   height: 104px;
   padding: 15px;
   overflow: hidden;
-  border: 1px solid rgba(123, 94, 60, 0.2);
+  border: 1px solid var(--border-color, rgba(123, 94, 60, 0.2));
   border-radius: 31px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--bg-secondary, #131D16);
   box-shadow:
-    0 22px 45px rgba(78, 58, 40, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 22px 45px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
 }
 
@@ -593,36 +593,85 @@ svg {
   background: rgba(255, 255, 255, 0.03) !important;
 }
 
-/* Polished modern form controls */
-input[type="text"],
-input[type="password"],
-input[type="email"],
-input[type="number"],
-input[type="date"],
-input[type="time"],
-input[type="search"],
+/* Polished modern form controls across all pages, roles, and components */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
 select,
 textarea {
   background-color: var(--bg-tertiary, #17241B);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   color: var(--text-primary, #F3F7F4);
   border-radius: 10px;
+  font: inherit;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-input[type="text"]:focus,
-input[type="password"]:focus,
-input[type="email"]:focus,
-input[type="number"]:focus,
-input[type="date"]:focus,
-input[type="time"]:focus,
-input[type="search"]:focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus,
 select:focus,
 textarea:focus {
   outline: none;
   background-color: var(--bg-secondary, #131D16);
   border-color: var(--sage-green, #34D399);
   box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+}
+
+/* Dark mode explicit inputs & native calendar/dropdown styling */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  color-scheme: dark;
+  background-color: var(--bg-tertiary, #17241B) !important;
+  border-color: var(--border-color, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--text-primary, #F3F7F4) !important;
+}
+
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  background-color: var(--bg-secondary, #131D16) !important;
+  border-color: var(--sage-green, #34D399) !important;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2) !important;
+}
+
+[data-theme="dark"] select option {
+  background-color: #131D16;
+  color: #F3F7F4;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted, #6C8274) !important;
+  opacity: 0.75;
+}
+
+/* Light mode explicit styling */
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  color-scheme: light;
+  background-color: var(--bg-tertiary, #F5EFE6);
+  border-color: var(--border-color, rgba(123, 94, 60, 0.14));
+  color: var(--text-primary, #111827);
+}
+
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+  background-color: var(--bg-secondary, #FFFFFF);
+  border-color: var(--earth-brown, #7B5E3C);
+  box-shadow: 0 0 0 3px rgba(123, 94, 60, 0.15);
+}
+
+[data-theme="light"] select option {
+  background-color: #FFFFFF;
+  color: #111827;
 }
 
 /* Mobile-Responsive Utilities */
