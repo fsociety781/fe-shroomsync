@@ -835,39 +835,62 @@ const Sidebar = ({ activePage, setActivePage, activeTechTab = 'dashboard', setAc
   return (
     <>
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-        <div className="logo-container">
-          <div className="logo-icon" style={{ width: '50px', height: '50px', minWidth: '50px', minHeight: '50px' }}>
-            <img src="/log.svg?v=2" alt="ShroomSync" style={{ 
+        <div className="logo-container" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', padding: '0 4px' }}>
+          <div className="logo-icon" style={{ 
+            width: '44px', 
+            height: '44px', 
+            minWidth: '44px', 
+            minHeight: '44px', 
+            flexShrink: 0,
+            borderRadius: '50%',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'transparent'
+          }}>
+            <img src="/log.svg?v=4" alt="ShroomSync" style={{ 
               width: '100%', 
               height: '100%', 
               objectFit: 'contain',
+              borderRadius: '50%',
               display: 'block'
             }} />
           </div>
-          <h1 className="logo-text">ShroomSync</h1>
+          <h1 className="logo-text" style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--earth-brown)' }}>ShroomSync</h1>
         </div>
 
-        <div className="sidebar-profile" style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px' }}>
+        <div className="sidebar-profile" style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div className="profile-avatar" style={{
+            width: '40px',
+            height: '40px',
+            minWidth: '40px',
+            minHeight: '40px',
+            flexShrink: 0,
+            borderRadius: '50%',
+            aspectRatio: '1 / 1',
             background: isTechUser ? 'var(--earth-brown)' : isAdminUser ? 'var(--earth-brown)' : 'var(--sage-deep)',
-            color: '#FFFFFF'
+            color: '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}>
             {isTechUser ? <Wrench size={20} /> : isAdminUser ? <Shield size={20} /> : <Sprout size={20} />}
           </div>
-          <div className="profile-info">
-            <h4 title={currentUser?.fullName || currentUser?.username} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)', fontWeight: 700 }}>
+          <div className="profile-info" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+            <h4 title={currentUser?.fullName || currentUser?.username} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)', fontWeight: 700, margin: 0 }}>
               {currentUser?.fullName || currentUser?.username || (isTechUser ? 'Teknisi Utama' : isAdminUser ? 'Admin Wilayah' : 'Petani Mitra')}
             </h4>
             {isTechUser ? (
-              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: 'var(--earth-brown)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: 'var(--earth-brown)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 ADMIN PUSAT
               </p>
             ) : isAdminUser ? (
-              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: 'var(--earth-brown)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: 'var(--earth-brown)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 ADMIN WILAYAH
               </p>
             ) : (
-              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: 'var(--sage-green)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: 'var(--sage-green)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 PETANI KUMBUNG
               </p>
             )}
