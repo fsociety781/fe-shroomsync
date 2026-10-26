@@ -1057,9 +1057,6 @@ const Header = ({ title, subtitle, actions, onBack, onMenuToggle }) => {
               padding: '8px',
               color: 'var(--tech-text-primary)',
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
             }}
             aria-label="Toggle Navigation Menu"
           >
