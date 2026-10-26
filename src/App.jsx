@@ -1802,55 +1802,25 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
         breadcrumb={['Petani Panel', 'Kumbung Saya']}
         onMenuToggle={onMenuToggle}
         actions={
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <>
             <button 
               type="button"
-              className="secondary-button" 
+              className="tech-btn-secondary" 
               onClick={() => setShowScannerModal(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                backgroundColor: 'var(--bg-secondary)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '9px 16px',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'all 0.15s ease',
-              }}
               title="Scan Barcode / QR SupaKu"
             >
-              <ScanLine size={16} style={{ color: 'var(--earth-brown)' }} />
+              <ScanLine size={15} style={{ color: 'var(--tech-earth-brown)' }} />
               <span>Scan Barcode</span>
             </button>
             <button 
               type="button"
-              className="primary-button" 
+              className="tech-btn-primary" 
               onClick={() => setShowAddModal(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                backgroundColor: '#7B5E3C',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '9px 18px',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(123, 94, 60, 0.25)',
-                transition: 'all 0.15s ease',
-              }}
             >
               <Plus size={16} />
               <span>Tambah Kumbung</span>
             </button>
-          </div>
+          </>
         }
       />
       
@@ -2604,21 +2574,19 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
         breadcrumb={['Petani Panel', 'Siklus & Panen']}
         onMenuToggle={onMenuToggle}
         actions={
-          <div className="kumbung-selector">
-            <select
-              value={activeDeviceId || ''}
-              onChange={(event) => setSelectedDeviceId(event.target.value)}
-              style={{ border: 'none', background: 'transparent', outline: 'none', cursor: 'pointer', fontWeight: 700, color: 'var(--text-primary)' }}
-            >
-              {devices.length === 0 && <option value="">Belum ada kumbung</option>}
-              {devices.map((device) => (
-                <option key={device.deviceId || device.id} value={device.deviceId || device.id}>
-                  {device.name || device.deviceId || device.id}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={16} className="chevron-icon" />
-          </div>
+          <select
+            className="tech-time-select"
+            value={activeDeviceId || ''}
+            onChange={(event) => setSelectedDeviceId(event.target.value)}
+            aria-label="Pilih Kumbung"
+          >
+            {devices.length === 0 && <option value="">Belum ada kumbung</option>}
+            {devices.map((device) => (
+              <option key={device.deviceId || device.id} value={device.deviceId || device.id}>
+                {device.name || device.deviceId || device.id}
+              </option>
+            ))}
+          </select>
         }
       />
 
@@ -3608,8 +3576,9 @@ const NotifikasiContent = ({ onMenuToggle }) => {
         breadcrumb={['Petani Panel', 'Pusat Notifikasi']}
         onMenuToggle={onMenuToggle}
         actions={
-          <button className="icon-button" onClick={() => setFilter('Semua')} aria-label="Reset filter notifikasi">
-            <Filter size={20} />
+          <button className="tech-btn-secondary" onClick={() => setFilter('Semua')} aria-label="Reset filter notifikasi">
+            <Filter size={14} />
+            <span>Reset Filter</span>
           </button>
         }
       />
@@ -5723,7 +5692,7 @@ function App() {
             {/* Top Breadcrumb & Status Bar - Synchronized with Technician Dashboard */}
             <div className="tech-top-banner">
               <div className="tech-breadcrumb">
-                <Sprout size={13} style={{ opacity: 0.8, color: 'var(--tech-sage-green)' }} />
+                <Sprout size={13} style={{ opacity: 0.9, color: '#86efac' }} />
                 <span>Petani Panel</span>
                 <ChevronRight size={10} style={{ opacity: 0.5 }} />
                 <span className="active-crumb">
