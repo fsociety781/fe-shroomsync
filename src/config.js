@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+
 const API_CONFIG = {
   development: {
     baseURL: '/api/v1',
@@ -11,15 +13,24 @@ const API_CONFIG = {
     baseURL: 'https://api.shroomsync.web.id/api/v1',
     wsURL: 'https://api.shroomsync.web.id',
   },
+  mobile: {
+    baseURL: 'https://api.shroomsync.web.id/api/v1',
+    wsURL: 'https://api.shroomsync.web.id',
+  },
 };
 
-const envName = import.meta.env.VITE_APP_ENV || 'development';
-const envConfig = API_CONFIG[envName] || API_CONFIG.development;
-const rawBaseURL = import.meta.env.VITE_API_BASE_URL || envConfig.baseURL;
+const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform();
+const envName = import.meta.env.VITE_APP_ENV || (isNative ? 'mobile' : (import.meta.env.PROD ? 'production' : 'development'));
+const envConfig = API_CONFIG[envName] || (isNative || import.meta.env.PROD ? API_CONFIG.production : API_CONFIG.development);
+const rawBaseURL = import.meta.env.VITE_API_BASE_URL || (isNative ? 'https://api.shroomsync.web.id/api/v1' : envConfig.baseURL);
 
 const resolvedBaseURL = (() => {
-  if (!rawBaseURL) return '/api/v1';
-  const clean = rawBaseURL.replace(/\/+$/, '');
+  let target = rawBaseURL;
+  if (isNative && (!target || !/^https?:\/\//i.test(target))) {
+    target = 'https://api.shroomsync.web.id/api/v1';
+  }
+  if (!target) return '/api/v1';
+  const clean = target.replace(/\/+$/, '');
   if (/^https?:\/\//i.test(clean) && !clean.endsWith('/api/v1')) {
     return `${clean}/api/v1`;
   }

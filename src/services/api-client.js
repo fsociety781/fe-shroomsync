@@ -80,7 +80,11 @@ class APIClient {
   buildURL(endpoint) {
     if (/^https?:\/\//i.test(endpoint)) return endpoint;
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    return `${this.baseURL}${normalizedEndpoint}`;
+    let base = this.baseURL;
+    if (this.isNativeHttp() && (!base || !/^https?:\/\//i.test(base))) {
+      base = 'https://api.shroomsync.web.id/api/v1';
+    }
+    return `${base}${normalizedEndpoint}`;
   }
 
   isNativeHttp() {
