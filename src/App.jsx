@@ -1042,19 +1042,19 @@ const Sidebar = ({ activePage, setActivePage, activeTechTab = 'dashboard', setAc
 };
 
 // --- Header Component ---
-const Header = ({ title, subtitle, actions, onBack, onMenuToggle }) => {
+const Header = ({ title, subtitle, actions, onBack, onMenuToggle, breadcrumb, statusBadge }) => {
   const { Icon: HeaderIcon, tone } = getHeaderContext(title);
 
   return (
     <header className="header" data-page-tone={tone}>
       <div className="header-title">
         {onMenuToggle && (
-          <button className="mobile-menu-toggle" onClick={onMenuToggle}>
+          <button className="mobile-menu-toggle" onClick={onMenuToggle} aria-label="Buka menu navigasi">
             <Menu size={24} />
           </button>
         )}
         {onBack && (
-          <button className="icon-button back-btn" onClick={onBack}>
+          <button className="icon-button back-btn" onClick={onBack} aria-label="Kembali">
             <ArrowLeft size={20} />
           </button>
         )}
@@ -1062,11 +1062,24 @@ const Header = ({ title, subtitle, actions, onBack, onMenuToggle }) => {
           <HeaderIcon size={20} />
         </div>
         <div className="header-copy">
+          {breadcrumb && breadcrumb.length > 0 && (
+            <div className="header-breadcrumb">
+              {breadcrumb.map((crumb, idx) => (
+                <span key={idx} className="breadcrumb-segment">
+                  {idx > 0 && <ChevronRight size={10} className="breadcrumb-separator" />}
+                  <span className={idx === breadcrumb.length - 1 ? 'active-crumb' : 'crumb-item'}>
+                    {crumb}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
           <h2>{title}</h2>
           {subtitle && <p>{subtitle}</p>}
         </div>
       </div>
       <div className="header-actions">
+        {statusBadge}
         {actions}
       </div>
     </header>
@@ -1074,7 +1087,7 @@ const Header = ({ title, subtitle, actions, onBack, onMenuToggle }) => {
 };
 
 // --- 1. Dashboard Content ---
-const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuToggle, liveSensorEvent, liveHistoryEvent }) => {
+const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuToggle, liveSensorEvent, liveHistoryEvent, theme, toggleTheme }) => {
   const onlineCount = devices.filter(d => d.isOnline).length;
   const [dashboardDeviceId, setDashboardDeviceId] = useState(null);
   const [latestReadings, setLatestReadings] = useState([]);
@@ -1295,9 +1308,14 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
       <Header 
         title="Dashboard" 
         subtitle="Ringkasan kondisi kumbung Anda hari ini."
+        breadcrumb={['Petani Panel', 'Dashboard Kumbung']}
         onMenuToggle={onMenuToggle}
         actions={
           <>
+            <div className="header-status-badge">
+              <span className="header-pulse-dot" />
+              <span>Kumbung Aktif: <strong>{onlineCount}/{devices.length} Online</strong></span>
+            </div>
             <div className="kumbung-selector">
               <select
                 value={activeDashboardDeviceId || ''}
@@ -1313,7 +1331,18 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
               </select>
               <ChevronDown size={16} className="chevron-icon" />
             </div>
-            <button className="icon-button notification-btn" onClick={() => setActivePage('notifikasi')}>
+            {toggleTheme && (
+              <button 
+                type="button" 
+                className="icon-button header-theme-toggle" 
+                onClick={toggleTheme} 
+                title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                aria-label="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun size={18} style={{ color: '#FBBF24' }} /> : <Moon size={18} style={{ color: 'var(--earth-brown)' }} />}
+              </button>
+            )}
+            <button className="icon-button notification-btn" onClick={() => setActivePage('notifikasi')} title="Pusat Notifikasi" aria-label="Buka notifikasi">
               <Bell size={20} />
             </button>
           </>
@@ -1327,11 +1356,11 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          {/* Card 1: Kumbung Aktif */}
+          {/* Card 1: Total Kumbung */}
           <div className="stat-card minimal">
             <span className="stat-title">
               <span>Total Kumbung</span>
-              <Home size={14} style={{ color: '#7B5E3C' }} />
+              <Home size={14} style={{ color: 'var(--earth-brown, #7B5E3C)' }} />
             </span>
             <div className="stat-value">{devices.length}</div>
             <div className="stat-status text-earth">Terdaftar di akun</div>
@@ -1347,19 +1376,22 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
             <div className="stat-status text-sage">{devices.length > 0 ? Math.round((onlineCount / devices.length) * 100) : 0}% terhubung aktif</div>
           </div>
 
-          {/* Card 3: Status Jadwal */}
-          <div className="stat-card minimal" style={{ cursor: 'pointer' }} onClick={() => setActivePage('kontrol')}>
+          {/* Card 3: Status Operasi & Jadwal */}
+          <div className="stat-card minimal" style={{ cursor: 'pointer' }} onClick={() => setActivePage('kontrol')} title="Buka kontrol & parameter">
             <span className="stat-title">
-              <span>Mode Jadwal</span>
-              <Clock size={14} style={{ color: '#7B5E3C' }} />
+              <span>Mode Operasi</span>
+              <Clock size={14} style={{ color: 'var(--sage-green, #10B981)' }} />
             </span>
             <div className="stat-value">
-              {activeDashboardDevice?.config?.scheduleMode === 1 ? '1x Sehari' : 
-               activeDashboardDevice?.config?.scheduleMode === 2 ? '2x Sehari' : 
-               activeDashboardDevice?.config?.scheduleMode === 3 ? '3x Sehari' : 'Manual'}
+              {activeDashboardDevice?.config?.controlMode === 1 ? 'Manual' : 
+               activeDashboardDevice?.config?.controlMode === 3 ? 'Hybrid' : 'Otomatis'}
             </div>
             <div className="stat-status text-sage">
-              {activeDashboardDevice?.config?.controlMode === 2 ? 'Otomatis' : 'Manual'}
+              {activeDashboardDevice?.config?.controlMode === 1 
+                ? 'Aktuator Langsung' 
+                : activeDashboardDevice?.config?.scheduleMode 
+                ? `${activeDashboardDevice.config.scheduleMode}x Sehari` 
+                : 'Sensor Setpoint'}
             </div>
           </div>
 
@@ -1445,9 +1477,9 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
               <div className="stacked-charts" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* Grafik Suhu */}
                 <div className="chart-row metric-temp">
-                  <div className="chart-graph" style={{ height: '180px' }}>
+                  <div className="chart-graph" style={{ height: '170px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={formattedDashboardHistory} margin={{ top: 8, right: 12, left: -10, bottom: 8 }}>
+                      <AreaChart data={formattedDashboardHistory} margin={{ top: 8, right: 12, left: -10, bottom: 4 }}>
                         <defs>
                           <linearGradient id="dashboardTempGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="var(--chart-temp-line)" stopOpacity={0.32}/>
@@ -1455,7 +1487,7 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="4 6" vertical={false} stroke={chartGridStroke} />
-                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={10} minTickGap={24} />
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={6} minTickGap={24} />
                         <YAxis axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={chartAxisFormatter} domain={['dataMin - 2', 'dataMax + 2']} />
                         <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(value) => [`${Number(value).toFixed(2)}°C`, 'Suhu']} />
                         <Area 
@@ -1473,13 +1505,13 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                   </div>
                 </div>
 
-                <div className="chart-divider" style={{ height: '1px', backgroundColor: '#F3F4F6' }}></div>
+                <div className="chart-divider" style={{ height: '1px', backgroundColor: 'var(--border-color)' }}></div>
 
                 {/* Grafik Kelembaban */}
                 <div className="chart-row metric-hum">
-                  <div className="chart-graph" style={{ height: '180px' }}>
+                  <div className="chart-graph" style={{ height: '170px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={formattedDashboardHistory} margin={{ top: 8, right: 12, left: -10, bottom: 8 }}>
+                      <AreaChart data={formattedDashboardHistory} margin={{ top: 8, right: 12, left: -10, bottom: 4 }}>
                         <defs>
                           <linearGradient id="dashboardHumGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="var(--chart-hum-line)" stopOpacity={0.3}/>
@@ -1487,7 +1519,7 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="4 6" vertical={false} stroke={chartGridStroke} />
-                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={10} minTickGap={24} />
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={chartAxisTick} dy={6} minTickGap={24} />
                         <YAxis axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={chartAxisFormatter} domain={['dataMin - 5', 'dataMax + 5']} />
                         <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Kelembaban']} />
                         <Area 
@@ -1692,6 +1724,7 @@ const KumbungContent = ({ setActivePage, devices, refetchDevices, setSelectedDev
       <Header 
         title="Kumbung Saya" 
         subtitle="Kelola semua kumbung yang Anda miliki."
+        breadcrumb={['Petani Panel', 'Kumbung Saya']}
         onMenuToggle={onMenuToggle}
         actions={
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -2493,6 +2526,7 @@ const SiklusPanenContent = ({ selectedDeviceId, setSelectedDeviceId, devices, se
       <Header
         title="Siklus & Panen"
         subtitle="Mulai siklus budidaya, catat panen harian, dan baca performa per kumbung."
+        breadcrumb={['Petani Panel', 'Siklus & Panen']}
         onMenuToggle={onMenuToggle}
         actions={
           <div className="kumbung-selector">
@@ -3182,6 +3216,8 @@ const MonitoringContent = ({ setActivePage, selectedDeviceId, setSelectedDeviceI
     <>
       <Header 
         title={`Monitoring - ${activeDevice?.name || '---'}`}
+        subtitle="Grafik parameter suhu, kelembaban, dan data telemetri real-time."
+        breadcrumb={['Petani Panel', 'Monitoring Sensor']}
         onMenuToggle={onMenuToggle}
         onBack={() => setActivePage('dashboard')}
       />
@@ -3494,6 +3530,7 @@ const NotifikasiContent = ({ onMenuToggle }) => {
       <Header 
         title="Pusat Notifikasi" 
         subtitle="Riwayat peringatan dan aktivitas sistem Anda."
+        breadcrumb={['Petani Panel', 'Pusat Notifikasi']}
         onMenuToggle={onMenuToggle}
         actions={
           <button className="icon-button" onClick={() => setFilter('Semua')} aria-label="Reset filter notifikasi">
@@ -3732,6 +3769,7 @@ const ProfilContent = ({ onMenuToggle, currentUser, setCurrentUser, onLogout }) 
         <Header 
           title="Profil Pengguna"
           onMenuToggle={onMenuToggle}
+          breadcrumb={['Petani Panel', 'Profil Pengguna']}
           subtitle="Kelola informasi akun dan preferensi aplikasi Anda."
         />
       )}
@@ -4696,8 +4734,9 @@ const KontrolContent = ({ selectedDeviceId, setSelectedDeviceId, devices, update
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <Header 
         title="Kontrol & Pengaturan"
-        onMenuToggle={onMenuToggle}
         subtitle="Konfigurasi logika aktuator berdasarkan spesifikasi firmware SupaKu."
+        breadcrumb={['Petani Panel', 'Kontrol & Parameter']}
+        onMenuToggle={onMenuToggle}
       />
       
       <div className="page-content">
@@ -5606,38 +5645,18 @@ function App() {
         {/* 3. Portal Khusus Petani: Dashboard Farmer */}
         {userRole !== 'ADMIN' && userRole !== 'TECHNICIAN' && (
           <div className="farmer-portal-container" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%', flex: 1 }}>
-            <div className="tech-top-banner">
-              <div className="tech-breadcrumb">
-                <span>PETANI PANEL</span>
-                <ChevronRight size={12} />
-                <span className="active-crumb">
-                  {activePage === 'dashboard' && 'DASHBOARD KUMBUNG'}
-                  {activePage === 'kumbung' && 'KUMBUNG SAYA'}
-                  {activePage === 'monitoring' && 'MONITORING SENSOR'}
-                  {activePage === 'siklus' && 'SIKLUS & PANEN'}
-                  {activePage === 'kontrol' && 'KONTROL & PARAMETER'}
-                  {activePage === 'notifikasi' && 'PUSAT NOTIFIKASI'}
-                  {activePage === 'profil' && 'PROFIL PETANI'}
-                </span>
-              </div>
-              <div className="tech-server-status">
-                <div className="tech-pulse-dot" />
-                <span>Kumbung Aktif: <strong>{devices.filter(d => d.isOnline).length}/{devices.length} Online</strong></span>
-                <span style={{ opacity: 0.4 }}>•</span>
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="tech-theme-toggle-btn"
-                  title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
-                  aria-label="Toggle Theme"
-                >
-                  {theme === 'dark' ? <Sun size={13} style={{ color: '#FBBF24' }} /> : <Moon size={13} style={{ color: '#E5E7EB' }} />}
-                  <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-                </button>
-              </div>
-            </div>
-
-            {activePage === 'dashboard' && <DashboardContent devices={devices} setSelectedDeviceId={setSelectedDeviceId} setActivePage={handleSetActivePage} onMenuToggle={toggleSidebar} liveSensorEvent={liveSensorEvent} liveHistoryEvent={liveHistoryEvent} />}
+            {activePage === 'dashboard' && (
+              <DashboardContent 
+                devices={devices} 
+                setSelectedDeviceId={setSelectedDeviceId} 
+                setActivePage={handleSetActivePage} 
+                onMenuToggle={toggleSidebar} 
+                liveSensorEvent={liveSensorEvent} 
+                liveHistoryEvent={liveHistoryEvent} 
+                theme={theme}
+                toggleTheme={toggleTheme}
+              />
+            )}
             {activePage === 'kumbung' && <KumbungContent setActivePage={handleSetActivePage} devices={devices} refetchDevices={refetch} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} onMenuToggle={toggleSidebar} />}
             {activePage === 'monitoring' && <MonitoringContent setActivePage={handleSetActivePage} selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} selectedDevice={selectedDevice} onMenuToggle={toggleSidebar} liveSensorEvent={liveSensorEvent} liveHistoryEvent={liveHistoryEvent} />}
             {activePage === 'siklus' && <SiklusPanenContent selectedDeviceId={selectedDeviceId} setSelectedDeviceId={setSelectedDeviceId} devices={devices} selectedDevice={selectedDevice} onMenuToggle={toggleSidebar} />}
