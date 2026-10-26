@@ -101,9 +101,17 @@ export default function OnboardingScreen({ user, onComplete, onLogout, theme, to
       // 2. Cek apakah akun petani ini sudah memiliki device yang ditautkan (misal oleh Admin/Teknisi)
       let hasDevice = false;
       try {
+        const currentUserId = response?.user?.id || user?.id || api.auth.getUser()?.id;
         const deviceList = await api.devices.list();
-        if (Array.isArray(deviceList) && deviceList.length > 0) {
-          hasDevice = true;
+        if (Array.isArray(deviceList) && deviceList.length > 0 && currentUserId) {
+          // Hanya anggap punya device jika device tersebut benar-benar milik petani yang sedang onboarding!
+          const myDevices = deviceList.filter((d) => {
+            const devFarmerId = d.farmerId || d.userId || d.farmer?.id;
+            return Boolean(devFarmerId && String(devFarmerId) === String(currentUserId));
+          });
+          if (myDevices.length > 0) {
+            hasDevice = true;
+          }
         }
       } catch (checkErr) {
         console.warn('[OnboardingScreen] Gagal memeriksa daftar perangkat:', checkErr);

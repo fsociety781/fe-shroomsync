@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import config from '../config';
 import DeviceService from '../services/DeviceService';
+import AuthService from '../services/AuthService';
 
 const DEVICE_POLL_MS = config.polling.devicesMs;
 
@@ -52,7 +53,18 @@ function useDevices(options = {}) {
       if (!silent) setLoading(true);
       const result = await DeviceService.getAllDevices();
       const data = unwrap(result);
-      const list = Array.isArray(data) ? data.map(normalizeDevice) : [];
+      let list = Array.isArray(data) ? data.map(normalizeDevice) : [];
+
+      // Untuk akun petani, pastikan hanya menampilkan perangkat yang benar-benar milik petani tersebut
+      const storedUser = AuthService.getUser();
+      const isFarmer = (storedUser?.role || '').toUpperCase() === 'FARMER';
+      if (isFarmer && storedUser?.id) {
+        list = list.filter((device) => {
+          const ownerId = device.farmerId || device.userId || device.farmer?.id;
+          return Boolean(ownerId && String(ownerId) === String(storedUser.id));
+        });
+      }
+
       setDevices(list);
       setError(null);
       return list;
