@@ -1041,45 +1041,49 @@ const Sidebar = ({ activePage, setActivePage, activeTechTab = 'dashboard', setAc
   );
 };
 
-// --- Header Component ---
-const Header = ({ title, subtitle, actions, onBack, onMenuToggle, breadcrumb, statusBadge }) => {
-  const { Icon: HeaderIcon, tone } = getHeaderContext(title);
-
+// --- Header Component (Aligned with Technician Header Standard) ---
+const Header = ({ title, subtitle, actions, onBack, onMenuToggle }) => {
   return (
-    <header className="header" data-page-tone={tone}>
-      <div className="header-title">
+    <header className="tech-header">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         {onMenuToggle && (
-          <button className="mobile-menu-toggle" onClick={onMenuToggle} aria-label="Buka menu navigasi">
-            <Menu size={24} />
+          <button
+            onClick={onMenuToggle}
+            className="mobile-menu-toggle"
+            style={{
+              background: 'var(--tech-card-bg)',
+              border: '1px solid var(--tech-border)',
+              borderRadius: '10px',
+              padding: '8px',
+              color: 'var(--tech-text-primary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            aria-label="Toggle Navigation Menu"
+          >
+            <Menu size={20} />
           </button>
         )}
         {onBack && (
-          <button className="icon-button back-btn" onClick={onBack} aria-label="Kembali">
-            <ArrowLeft size={20} />
+          <button
+            onClick={onBack}
+            className="tech-btn-secondary"
+            style={{ padding: '8px 12px' }}
+            aria-label="Kembali"
+          >
+            <ArrowLeft size={16} />
+            <span>Kembali</span>
           </button>
         )}
-        <div className="header-title-badge" aria-hidden="true">
-          <HeaderIcon size={20} />
-        </div>
-        <div className="header-copy">
-          {breadcrumb && breadcrumb.length > 0 && (
-            <div className="header-breadcrumb">
-              {breadcrumb.map((crumb, idx) => (
-                <span key={idx} className="breadcrumb-segment">
-                  {idx > 0 && <ChevronRight size={10} className="breadcrumb-separator" />}
-                  <span className={idx === breadcrumb.length - 1 ? 'active-crumb' : 'crumb-item'}>
-                    {crumb}
-                  </span>
-                </span>
-              ))}
-            </div>
-          )}
-          <h2>{title}</h2>
-          {subtitle && <p>{subtitle}</p>}
+        <div>
+          <h1 className="tech-header-title">{title}</h1>
+          {subtitle && <p className="tech-header-subtitle">{subtitle}</p>}
         </div>
       </div>
-      <div className="header-actions">
-        {statusBadge}
+
+      <div className="tech-header-actions">
         {actions}
       </div>
     </header>
@@ -1306,169 +1310,180 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
   return (
     <>
       <Header 
-        title="Dashboard" 
-        subtitle="Ringkasan kondisi kumbung Anda hari ini."
+        title="Dashboard Kumbung" 
+        subtitle="Ringkasan kondisi kumbung Anda hari ini secara real-time."
         breadcrumb={['Petani Panel', 'Dashboard Kumbung']}
         onMenuToggle={onMenuToggle}
         actions={
           <>
-            <div className="header-status-badge">
-              <span className="header-pulse-dot" />
-              <span>Kumbung Aktif: <strong>{onlineCount}/{devices.length} Online</strong></span>
-            </div>
-            <div className="kumbung-selector">
-              <select
-                value={activeDashboardDeviceId || ''}
-                onChange={(event) => setDashboardDeviceId(event.target.value)}
-                style={{ border: 'none', background: 'transparent', outline: 'none', cursor: 'pointer', fontWeight: 700, color: 'var(--text-primary)' }}
-              >
-                {devices.length === 0 && <option value="">Belum ada kumbung</option>}
-                {devices.map((device) => (
-                  <option key={device.deviceId || device.id} value={device.deviceId || device.id}>
-                    {device.name || device.deviceId || device.id}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="chevron-icon" />
-            </div>
-            {toggleTheme && (
-              <button 
-                type="button" 
-                className="icon-button header-theme-toggle" 
-                onClick={toggleTheme} 
-                title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
-                aria-label="Toggle Theme"
-              >
-                {theme === 'dark' ? <Sun size={18} style={{ color: '#FBBF24' }} /> : <Moon size={18} style={{ color: 'var(--earth-brown)' }} />}
-              </button>
-            )}
-            <button className="icon-button notification-btn" onClick={() => setActivePage('notifikasi')} title="Pusat Notifikasi" aria-label="Buka notifikasi">
-              <Bell size={20} />
+            <select
+              className="tech-time-select"
+              value={activeDashboardDeviceId || ''}
+              onChange={(event) => setDashboardDeviceId(event.target.value)}
+              aria-label="Pilih Kumbung"
+            >
+              {devices.length === 0 && <option value="">Belum ada kumbung</option>}
+              {devices.map((device) => (
+                <option key={device.deviceId || device.id} value={device.deviceId || device.id}>
+                  {device.name || device.deviceId || device.id}
+                </option>
+              ))}
+            </select>
+            <button
+              className="tech-btn-secondary"
+              onClick={() => setActivePage('notifikasi')}
+              title="Pusat Notifikasi"
+              aria-label="Buka notifikasi"
+            >
+              <Bell size={14} />
+              <span>Notifikasi</span>
+              {dashboardAlerts.length > 0 && (
+                <span className="tech-badge-red" style={{ padding: '1px 6px', fontSize: '10px', marginLeft: '2px' }}>
+                  {dashboardAlerts.length}
+                </span>
+              )}
             </button>
           </>
         }
       />
       
-      <div className="dashboard-content">
-        <motion.div 
-          className="stats-row"
-          initial={{ opacity: 0, y: 15 }}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <motion.section 
+          className="farmer-stats-grid"
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.3 }}
         >
           {/* Card 1: Total Kumbung */}
-          <div className="stat-card minimal">
-            <span className="stat-title">
-              <span>Total Kumbung</span>
-              <Home size={14} style={{ color: 'var(--earth-brown, #7B5E3C)' }} />
-            </span>
-            <div className="stat-value">{devices.length}</div>
-            <div className="stat-status text-earth">Terdaftar di akun</div>
+          <div className="tech-stat-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span className="tech-stat-label" style={{ margin: 0 }}>Total Kumbung</span>
+              <Home size={14} style={{ color: 'var(--tech-earth-brown)' }} />
+            </div>
+            <div className="tech-stat-body">
+              <span className="tech-stat-number">{devices.length}</span>
+              <span className="tech-badge-neutral">Unit</span>
+            </div>
           </div>
 
           {/* Card 2: Kumbung Online */}
-          <div className="stat-card minimal">
-            <span className="stat-title">
-              <span>Kumbung Online</span>
-              <Wifi size={14} style={{ color: '#059669' }} />
-            </span>
-            <div className="stat-value">{onlineCount}</div>
-            <div className="stat-status text-sage">{devices.length > 0 ? Math.round((onlineCount / devices.length) * 100) : 0}% terhubung aktif</div>
+          <div className="tech-stat-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span className="tech-stat-label" style={{ margin: 0 }}>Kumbung Online</span>
+              <Wifi size={14} style={{ color: 'var(--tech-sage-green)' }} />
+            </div>
+            <div className="tech-stat-body">
+              <span className="tech-stat-number">{onlineCount}</span>
+              <span className="tech-badge-green">
+                {devices.length > 0 ? Math.round((onlineCount / devices.length) * 100) : 0}% Active
+              </span>
+            </div>
           </div>
 
           {/* Card 3: Status Operasi & Jadwal */}
-          <div className="stat-card minimal" style={{ cursor: 'pointer' }} onClick={() => setActivePage('kontrol')} title="Buka kontrol & parameter">
-            <span className="stat-title">
-              <span>Mode Operasi</span>
-              <Clock size={14} style={{ color: 'var(--sage-green, #10B981)' }} />
-            </span>
-            <div className="stat-value">
-              {activeDashboardDevice?.config?.controlMode === 1 ? 'Manual' : 
-               activeDashboardDevice?.config?.controlMode === 3 ? 'Hybrid' : 'Otomatis'}
+          <div className="tech-stat-card" style={{ cursor: 'pointer' }} onClick={() => setActivePage('kontrol')} title="Buka kontrol & parameter">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span className="tech-stat-label" style={{ margin: 0 }}>Mode Operasi</span>
+              <Clock size={14} style={{ color: 'var(--tech-sage-green)' }} />
             </div>
-            <div className="stat-status text-sage">
-              {activeDashboardDevice?.config?.controlMode === 1 
-                ? 'Aktuator Langsung' 
-                : activeDashboardDevice?.config?.scheduleMode 
-                ? `${activeDashboardDevice.config.scheduleMode}x Sehari` 
-                : 'Sensor Setpoint'}
+            <div className="tech-stat-body">
+              <span className="tech-stat-number" style={{ fontSize: '1.25rem' }}>
+                {activeDashboardDevice?.config?.controlMode === 1 ? 'Manual' : 
+                 activeDashboardDevice?.config?.controlMode === 3 ? 'Hybrid' : 'Otomatis'}
+              </span>
+              <span className="tech-badge-green">
+                {activeDashboardDevice?.config?.controlMode === 1 
+                  ? 'Aktuator' 
+                  : activeDashboardDevice?.config?.scheduleMode 
+                  ? `${activeDashboardDevice.config.scheduleMode}x/Hari` 
+                  : 'Sensor'}
+              </span>
             </div>
           </div>
 
           {/* Card 4: Suhu Rata-rata */}
-          <div className="stat-card minimal">
-            <span className="stat-title">
-              <span>Suhu Rata-rata</span>
+          <div className="tech-stat-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span className="tech-stat-label" style={{ margin: 0 }}>Suhu Rata-rata</span>
               <Thermometer size={14} style={{ color: '#E07A5F' }} />
-            </span>
-            <div className="stat-value">
-              {averageTemperature.length > 0
-                ? formatMetric(averageTemperature.reduce((sum, value) => sum + value, 0) / averageTemperature.length, '°C')
-                : '--'}
             </div>
-            <div className="stat-status text-sage">{averageTemperature.length} sensor aktif</div>
+            <div className="tech-stat-body">
+              <span className="tech-stat-number">
+                {averageTemperature.length > 0
+                  ? formatMetric(averageTemperature.reduce((sum, value) => sum + value, 0) / averageTemperature.length, '°C')
+                  : '--'}
+              </span>
+              <span className="tech-badge-neutral">{averageTemperature.length} Sensor</span>
+            </div>
           </div>
 
           {/* Card 5: Kelembaban Rata-rata */}
-          <div className="stat-card minimal">
-            <span className="stat-title">
-              <span>Kelembaban Rata-rata</span>
+          <div className="tech-stat-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span className="tech-stat-label" style={{ margin: 0 }}>Kelembaban Rata-rata</span>
               <Droplets size={14} style={{ color: '#2D6F6A' }} />
-            </span>
-            <div className="stat-value">
-              {averageHumidity.length > 0
-                ? formatMetric(averageHumidity.reduce((sum, value) => sum + value, 0) / averageHumidity.length, '%')
-                : '--'}
             </div>
-            <div className="stat-status text-sage">{averageHumidity.length} sensor aktif</div>
+            <div className="tech-stat-body">
+              <span className="tech-stat-number">
+                {averageHumidity.length > 0
+                  ? formatMetric(averageHumidity.reduce((sum, value) => sum + value, 0) / averageHumidity.length, '%')
+                  : '--'}
+              </span>
+              <span className="tech-badge-green">{averageHumidity.length} Sensor</span>
+            </div>
           </div>
 
           {/* Card 6: Alert Aktif */}
-          <div className="stat-card minimal" style={{ cursor: dashboardAlerts.length > 0 ? 'pointer' : 'default' }} onClick={() => dashboardAlerts.length > 0 && setActivePage('notifikasi')}>
-            <span className="stat-title">
-              <span>Status Peringatan</span>
-              <AlertCircle size={14} style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : '#059669' }} />
-            </span>
-            <div className="stat-value" style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : 'var(--text-primary)' }}>
-              {dashboardAlerts.length}
+          <div className="tech-stat-card" style={{ cursor: dashboardAlerts.length > 0 ? 'pointer' : 'default' }} onClick={() => dashboardAlerts.length > 0 && setActivePage('notifikasi')} title="Buka notifikasi">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span className="tech-stat-label" style={{ margin: 0 }}>Status Peringatan</span>
+              <AlertCircle size={14} style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : 'var(--tech-sage-green)' }} />
             </div>
-            <div className="stat-status font-semibold" style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : '#059669' }}>
-              {dashboardAlerts.length > 0 ? 'Perlu Tindakan' : 'Semua Normal'}
+            <div className="tech-stat-body">
+              <span className="tech-stat-number" style={{ color: dashboardAlerts.length > 0 ? '#DC2626' : 'inherit' }}>
+                {dashboardAlerts.length}
+              </span>
+              {dashboardAlerts.length > 0 ? (
+                <span className="tech-badge-red">Perlu Tindakan</span>
+              ) : (
+                <span className="tech-badge-green">Normal</span>
+              )}
             </div>
           </div>
-        </motion.div>
+        </motion.section>
 
-        <div className="dashboard-grid">
+        <section className="farmer-dashboard-grid">
+          {/* Kolom Kiri: Kondisi Real-time Sensor & Grafik Telemetri */}
           <motion.div 
-            className="chart-section panel"
-            initial={{ opacity: 0, x: -15 }}
+            className="tech-donut-card"
+            initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: 0.15 }}
-            style={{ padding: '20px 24px' }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            style={{ display: 'flex', flexDirection: 'column' }}
           >
-            <div className="panel-header" style={{ padding: '0 0 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '14px', borderBottom: '1px solid var(--tech-border)', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>Kondisi Real-time Sensor</h3>
-                <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <h3 className="tech-card-title" style={{ margin: 0 }}>Kondisi Real-time Sensor</h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: 'var(--tech-text-muted)' }}>
                   {activeDashboardDevice?.name || 'Kumbung Terpilih'} · Pemantauan suhu & kelembaban
                 </p>
               </div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                <Activity size={13} style={{ color: 'var(--earth-brown)' }} />
+              <div className="tech-badge-neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Activity size={12} style={{ color: 'var(--tech-earth-brown)' }} />
                 <span>{activeDashboardDevice?.name || 'Pilih Kumbung'}</span>
               </div>
             </div>
 
             {/* Metrik ringkas suhu & kelembaban */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', margin: '16px 0' }}>
-              <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#E07A5F' }}>Suhu Terkini</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', margin: '2px 0', lineHeight: 1.2 }}>{formatMetric(activeTemperature, '°C')}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', marginBottom: '18px' }}>
+              <div style={{ padding: '14px 18px', backgroundColor: 'var(--tech-soft-beige)', borderRadius: '12px', border: '1px solid var(--tech-border)' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#E07A5F' }}>Suhu Terkini</div>
+                <div style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--tech-text-primary)', margin: '4px 0', lineHeight: 1.1 }}>{formatMetric(activeTemperature, '°C')}</div>
                 <span className={`chart-status ${temperatureStatus.className}`} style={{ fontSize: '0.76rem', fontWeight: 600 }}>{temperatureStatus.label}</span>
               </div>
-              <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--sage-green)' }}>Kelembaban Terkini</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', margin: '2px 0', lineHeight: 1.2 }}>{formatMetric(activeHumidity, '%')}</div>
+              <div style={{ padding: '14px 18px', backgroundColor: 'var(--tech-soft-beige)', borderRadius: '12px', border: '1px solid var(--tech-border)' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--tech-sage-green)' }}>Kelembaban Terkini</div>
+                <div style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--tech-text-primary)', margin: '4px 0', lineHeight: 1.1 }}>{formatMetric(activeHumidity, '%')}</div>
                 <span className={`chart-status ${humidityStatus.className}`} style={{ fontSize: '0.76rem', fontWeight: 600 }}>{humidityStatus.label}</span>
               </div>
             </div>
@@ -1505,7 +1520,7 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
                   </div>
                 </div>
 
-                <div className="chart-divider" style={{ height: '1px', backgroundColor: 'var(--border-color)' }}></div>
+                <div className="chart-divider" style={{ height: '1px', backgroundColor: 'var(--tech-border)' }}></div>
 
                 {/* Grafik Kelembaban */}
                 <div className="chart-row metric-hum">
@@ -1541,112 +1556,172 @@ const DashboardContent = ({ devices, setSelectedDeviceId, setActivePage, onMenuT
               <div style={{
                 padding: '40px 20px',
                 textAlign: 'center',
-                backgroundColor: 'var(--bg-tertiary)',
-                borderRadius: '14px',
-                border: '1px dashed var(--border-color)',
+                backgroundColor: 'var(--tech-soft-beige)',
+                borderRadius: '12px',
+                border: '1px dashed var(--tech-border)',
                 margin: '10px 0',
               }}>
-                <Activity size={32} style={{ color: 'var(--earth-brown)', opacity: 0.5, margin: '0 auto 8px', display: 'block' }} />
-                <h4 style={{ margin: '0 0 4px', fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                <Activity size={32} style={{ color: 'var(--tech-earth-brown)', opacity: 0.5, margin: '0 auto 8px', display: 'block' }} />
+                <h4 style={{ margin: '0 0 4px', fontSize: '0.92rem', fontWeight: 700, color: 'var(--tech-text-primary)' }}>
                   Belum Ada Riwayat Data Sensor
                 </h4>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--tech-text-muted)' }}>
                   Grafik telemetri suhu dan kelembaban akan tampil otomatis saat sensor SupaKu aktif mengirim data.
                 </p>
               </div>
             )}
           </motion.div>
 
-          <div className="lists-section">
+          {/* Kolom Kanan: Status Kumbung & Notifikasi Terbaru */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Status Kumbung */}
             <motion.div 
-              className="list-panel panel"
-              initial={{ opacity: 0, x: 15 }}
+              className="tech-donut-card"
+              initial={{ opacity: 0, x: 12 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              style={{ padding: '20px 24px' }}
+              transition={{ duration: 0.3, delay: 0.15 }}
             >
-              <div className="panel-header" style={{ padding: '0 0 14px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Status Kumbung</h3>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--earth-brown)', backgroundColor: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '6px' }}>
-                  {devices.length} Unit
-                </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid var(--tech-border)', marginBottom: '14px' }}>
+                <h3 className="tech-card-title" style={{ margin: 0 }}>Status Kumbung</h3>
+                <span className="tech-badge-neutral">{devices.length} Unit</span>
               </div>
-              <div className="device-list" style={{ marginTop: '14px', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {devices.map((dev) => {
                   const deviceId = dev.deviceId || dev.id;
                   const reading = latestReadings.find((item) => item.deviceId === deviceId)?.sensor;
                   return (
-                  <div className="device-item" key={deviceId} onClick={() => handleDeviceClick(deviceId)} style={{ cursor: 'pointer', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
-                    <div className="device-icon" style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', color: 'var(--earth-brown)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Home size={16} />
+                    <div 
+                      key={deviceId} 
+                      onClick={() => handleDeviceClick(deviceId)} 
+                      style={{ 
+                        cursor: 'pointer', 
+                        padding: '12px 14px', 
+                        borderRadius: '10px', 
+                        border: '1px solid var(--tech-border)', 
+                        backgroundColor: 'var(--tech-soft-beige)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--tech-card-bg)', color: 'var(--tech-earth-brown)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Home size={16} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 style={{ margin: '0 0 2px', fontSize: '0.88rem', fontWeight: 700, color: 'var(--tech-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dev.name || deviceId}</h4>
+                        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--tech-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{formatMetric(readTemperature(reading), '°C')}</span>
+                          <span>·</span>
+                          <span>{formatMetric(readHumidity(reading), '%')}</span>
+                          <span>·</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: dev.isOnline ? '#34D399' : '#F87171' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: dev.isOnline ? '#34D399' : '#F87171' }} />
+                            {dev.isOnline ? 'Online' : 'Offline'}
+                          </span>
+                        </p>
+                      </div>
                     </div>
-                    <div className="device-info">
-                      <h4 style={{ margin: '0 0 2px', fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>{dev.name || deviceId}</h4>
-                      <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        {formatMetric(readTemperature(reading), '°C')} · {formatMetric(readHumidity(reading), '%')} ·{' '}
-                        <span className={dev.isOnline ? 'text-sage' : 'text-error'} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: dev.isOnline ? '#10B981' : '#EF4444' }} />
-                          {dev.isOnline ? 'Online' : 'Offline'}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                )})}
+                  );
+                })}
                 {devices.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--text-muted)' }}>
+                  <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--tech-text-muted)' }}>
                     <Home size={28} style={{ margin: '0 auto 6px', opacity: 0.35, display: 'block' }} />
-                    <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 2px' }}>Belum ada kumbung</p>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>Tautkan kumbung Anda di menu Kumbung Saya</p>
+                    <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--tech-text-secondary)', margin: '0 0 2px' }}>Belum ada kumbung</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--tech-text-muted)', margin: 0 }}>Tautkan kumbung Anda di menu Kumbung Saya</p>
                   </div>
                 )}
               </div>
-              <a href="#" className="view-all" style={{ marginTop: 'auto', paddingTop: '10px', fontSize: '0.82rem', fontWeight: 700, color: 'var(--earth-brown)' }} onClick={(e) => { e.preventDefault(); setActivePage('kumbung'); }}>
+              <button 
+                type="button" 
+                onClick={() => setActivePage('kumbung')}
+                style={{ 
+                  marginTop: '14px', 
+                  background: 'transparent', 
+                  border: 'none', 
+                  padding: '6px 0 0', 
+                  fontSize: '0.82rem', 
+                  fontWeight: 700, 
+                  color: 'var(--tech-earth-brown)', 
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
                 Lihat Semua Kumbung &rarr;
-              </a>
+              </button>
             </motion.div>
 
+            {/* Notifikasi Terbaru */}
             <motion.div 
-              className="list-panel panel"
-              initial={{ opacity: 0, x: 15 }}
+              className="tech-donut-card"
+              initial={{ opacity: 0, x: 12 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.25 }}
-              style={{ padding: '20px 24px' }}
+              transition={{ duration: 0.3, delay: 0.2 }}
             >
-              <div className="panel-header" style={{ padding: '0 0 14px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Notifikasi Terbaru</h3>
-                <Bell size={15} style={{ color: 'var(--text-muted)' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid var(--tech-border)', marginBottom: '14px' }}>
+                <h3 className="tech-card-title" style={{ margin: 0 }}>Notifikasi Terbaru</h3>
+                <Bell size={14} style={{ color: 'var(--tech-text-muted)' }} />
               </div>
-              <div className="notif-list" style={{ marginTop: '14px', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {(dashboardAlerts.length > 0 ? dashboardAlerts : dashboardLogs.slice(0, 3).map((log, index) => ({
                   id: log.id || `log-${index}`,
                   text: formatHistoryActivity(log),
                   time: formatRelativeTime(log.createdAt || log.recordedAt || log.time, dashboardNow),
                   type: 'info',
-                }))).slice(0,3).map((notif) => (
-                  <div className="notif-item" key={notif.id} style={{ padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
-                    <div className={`notif-icon ${notif.type}`} style={{ width: '32px', height: '32px', borderRadius: '8px' }}>
+                }))).slice(0, 3).map((notif) => (
+                  <div 
+                    key={notif.id} 
+                    style={{ 
+                      padding: '12px 14px', 
+                      borderRadius: '10px', 
+                      border: '1px solid var(--tech-border)', 
+                      backgroundColor: 'var(--tech-soft-beige)',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px'
+                    }}
+                  >
+                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', backgroundColor: notif.type === 'error' || dashboardAlerts.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'var(--tech-card-bg)', color: notif.type === 'error' || dashboardAlerts.length > 0 ? '#F87171' : 'var(--tech-sage-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <AlertCircle size={15} />
                     </div>
-                    <div className="notif-info">
-                      <p style={{ margin: '0 0 2px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{notif.text}</p>
-                      <span className="time" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{notif.time}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: '0 0 2px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--tech-text-primary)', lineHeight: 1.3 }}>{notif.text}</p>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--tech-text-muted)' }}>{notif.time}</span>
                     </div>
                   </div>
                 ))}
                 {dashboardAlerts.length === 0 && dashboardLogs.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--text-muted)' }}>
+                  <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--tech-text-muted)' }}>
                     <Bell size={28} style={{ margin: '0 auto 6px', opacity: 0.35, display: 'block' }} />
-                    <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 2px' }}>Semua kondisi normal</p>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>Tidak ada peringatan aktif saat ini</p>
+                    <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--tech-text-secondary)', margin: '0 0 2px' }}>Semua kondisi normal</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--tech-text-muted)', margin: 0 }}>Tidak ada peringatan aktif saat ini</p>
                   </div>
                 )}
               </div>
-              <a href="#" className="view-all" style={{ marginTop: 'auto', paddingTop: '10px', fontSize: '0.82rem', fontWeight: 700, color: '#7B5E3C' }} onClick={(e) => { e.preventDefault(); setActivePage('notifikasi'); }}>
+              <button 
+                type="button" 
+                onClick={() => setActivePage('notifikasi')}
+                style={{ 
+                  marginTop: '14px', 
+                  background: 'transparent', 
+                  border: 'none', 
+                  padding: '6px 0 0', 
+                  fontSize: '0.82rem', 
+                  fontWeight: 700, 
+                  color: 'var(--tech-earth-brown)', 
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
                 Lihat Semua Notifikasi &rarr;
-              </a>
+              </button>
             </motion.div>
           </div>
-        </div>
+        </section>
       </div>
     </>
   );
@@ -5644,7 +5719,51 @@ function App() {
 
         {/* 3. Portal Khusus Petani: Dashboard Farmer */}
         {userRole !== 'ADMIN' && userRole !== 'TECHNICIAN' && (
-          <div className="farmer-portal-container" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%', flex: 1 }}>
+          <div className="farmer-portal-container">
+            {/* Top Breadcrumb & Status Bar - Synchronized with Technician Dashboard */}
+            <div className="tech-top-banner">
+              <div className="tech-breadcrumb">
+                <Sprout size={13} style={{ opacity: 0.8, color: 'var(--tech-sage-green)' }} />
+                <span>Petani Panel</span>
+                <ChevronRight size={10} style={{ opacity: 0.5 }} />
+                <span className="active-crumb">
+                  {activePage === 'dashboard' ? 'Dashboard Kumbung' :
+                   activePage === 'kumbung' ? 'Kumbung Saya' :
+                   activePage === 'monitoring' ? 'Monitoring Sensor' :
+                   activePage === 'siklus' ? 'Siklus & Panen' :
+                   activePage === 'kontrol' ? 'Kontrol & Parameter' :
+                   activePage === 'notifikasi' ? 'Pusat Notifikasi' :
+                   activePage === 'profil' ? 'Profil Pengguna' : activePage}
+                </span>
+              </div>
+              <div className="tech-server-status">
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="tech-pulse-dot" />
+                  <span>Kumbung Aktif: <strong>{devices.filter(d => d.isOnline).length}/{devices.length} Online</strong></span>
+                </span>
+                <span style={{ opacity: 0.4 }}>•</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Radio size={13} style={{ color: '#86efac' }} />
+                  <span>Server: Terhubung</span>
+                </span>
+                {toggleTheme && (
+                  <>
+                    <span style={{ opacity: 0.4 }}>•</span>
+                    <button
+                      type="button"
+                      onClick={toggleTheme}
+                      className="tech-theme-toggle-btn"
+                      title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                      aria-label="Toggle Theme"
+                    >
+                      {theme === 'dark' ? <Sun size={13} style={{ color: '#FBBF24' }} /> : <Moon size={13} style={{ color: '#E5E7EB' }} />}
+                      <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
             {activePage === 'dashboard' && (
               <DashboardContent 
                 devices={devices} 
